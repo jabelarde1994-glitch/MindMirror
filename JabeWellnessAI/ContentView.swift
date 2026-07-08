@@ -2354,6 +2354,143 @@ struct BrainLogoView: View {
 }
 
 //*======================================================================*//
+// MARK: - Holographic Brain (Splash Only)
+//*======================================================================*//
+
+struct HolographicBrainView: View {
+
+    var size: CGFloat = 120
+
+    @State private var huePhase:   Double  = 0
+    @State private var glowScale:  CGFloat = 0.85
+    @State private var shimmerX:   CGFloat = -0.5
+    @State private var lightAlpha: [Double] = [0, 0, 0]
+    @State private var tick:       Int     = 0
+
+    private let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ZStack {
+
+            // Pulsing glow halos
+            ForEach(0..<3, id: \.self) { i in
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color(hue: hmod(huePhase + Double(i) * 0.15),
+                                      saturation: 0.9, brightness: 1.0).opacity(0.25),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 2,
+                            endRadius: size * (0.55 + CGFloat(i) * 0.20)
+                        )
+                    )
+                    .frame(
+                        width:  size * (1.5 + CGFloat(i) * 0.40),
+                        height: size * (1.3 + CGFloat(i) * 0.35)
+                    )
+                    .scaleEffect(glowScale + CGFloat(i) * 0.04)
+                    .blur(radius: 8 + CGFloat(i) * 4)
+            }
+
+            // Neon lightning arcs
+            Canvas { ctx, sz in
+                let cx = sz.width / 2
+                let cy = sz.height / 2
+                let arcs: [(CGPoint, CGPoint, CGPoint)] = [
+                    (CGPoint(x: cx - size*0.58, y: cy - size*0.28),
+                     CGPoint(x: cx - size*0.32, y: cy - size*0.52),
+                     CGPoint(x: cx - size*0.10, y: cy - size*0.20)),
+                    (CGPoint(x: cx + size*0.42, y: cy - size*0.38),
+                     CGPoint(x: cx + size*0.60, y: cy + size*0.02),
+                     CGPoint(x: cx + size*0.36, y: cy + size*0.26)),
+                    (CGPoint(x: cx - size*0.20, y: cy + size*0.46),
+                     CGPoint(x: cx + size*0.06, y: cy + size*0.64),
+                     CGPoint(x: cx + size*0.30, y: cy + size*0.40)),
+                ]
+                for (i, arc) in arcs.enumerated() {
+                    guard lightAlpha[i] > 0.05 else { continue }
+                    var p = Path()
+                    p.move(to: arc.0)
+                    p.addQuadCurve(to: arc.2, control: arc.1)
+                    ctx.stroke(
+                        p,
+                        with: .color(
+                            Color(hue: hmod(huePhase + Double(i) * 0.22),
+                                  saturation: 0.95, brightness: 1.0)
+                                .opacity(lightAlpha[i])
+                        ),
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+                    )
+                }
+            }
+            .frame(width: size * 2.4, height: size * 2.4)
+
+            // Holographic brain circles
+            ZStack {
+                hBrainCircle(hue: hmod(huePhase + 0.00), w: 0.70, ox:  0.02, oy: -0.18)
+                hBrainCircle(hue: hmod(huePhase + 0.14), w: 0.58, ox: -0.26, oy: -0.02)
+                hBrainCircle(hue: hmod(huePhase + 0.28), w: 0.62, ox: -0.16, oy:  0.22)
+                hBrainCircle(hue: hmod(huePhase + 0.42), w: 0.70, ox:  0.12, oy:  0.18)
+                hBrainCircle(hue: hmod(huePhase + 0.57), w: 0.52, ox:  0.28, oy:  0.04)
+                hBrainCircle(hue: hmod(huePhase + 0.71), w: 0.50, ox:  0.24, oy: -0.22)
+                hBrainCircle(hue: hmod(huePhase + 0.85), w: 0.32, ox:  0.04, oy: -0.04)
+            }
+            .mask(
+                Image(systemName: "brain")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size, height: size)
+            )
+            .frame(width: size, height: size)
+
+            // Shimmer sweep (Rectangle masked to brain shape)
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.50), .clear],
+                        startPoint: UnitPoint(x: shimmerX - 0.20, y: 0.2),
+                        endPoint:   UnitPoint(x: shimmerX + 0.20, y: 0.8)
+                    )
+                )
+                .frame(width: size, height: size)
+                .mask(
+                    Image(systemName: "brain")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: size, height: size)
+                )
+                .blendMode(.overlay)
+        }
+        .onReceive(timer) { _ in
+            tick     += 1
+            huePhase  = hmod(huePhase + 0.006)
+            glowScale = CGFloat(0.88 + sin(Double(tick) * 0.18) * 0.07)
+            shimmerX += 0.03
+            if shimmerX > 1.5 { shimmerX = -0.5 }
+            if tick % 4 == 0 {
+                for i in 0..<3 { lightAlpha[i] = Double.random(in: 0...0.72) }
+            }
+        }
+    }
+
+    private func hmod(_ v: Double) -> Double {
+        let r = v.truncatingRemainder(dividingBy: 1.0)
+        return r < 0 ? r + 1.0 : r
+    }
+
+    @ViewBuilder
+    private func hBrainCircle(hue: Double, w: CGFloat, ox: CGFloat, oy: CGFloat) -> some View {
+        Circle()
+            .fill(Color(hue: hue, saturation: 0.85, brightness: 0.95).opacity(0.9))
+            .frame(width: size * w, height: size * w)
+            .offset(x: size * ox, y: size * oy)
+    }
+}
+
+//*======================================================================*//
 // MARK: - Typewriter Text
 //*======================================================================*//
 
@@ -2409,9 +2546,12 @@ struct SplashScreen: View {
     @State private var showTitle    = false
     @State private var showSubtitle = false
     @State private var isActive     = false
+    @State private var bgHue: Double = 0.70
+    @State private var particles: [(CGFloat, CGFloat, CGFloat, Double)] = []
 
-    private let titleText    = "Jabe"
+    private let titleText   = "Jabe"
     private let typingSpeed: Double = 0.09
+    private let bgTimer = Timer.publish(every: 0.10, on: .main, in: .common).autoconnect()
 
     var body: some View {
 
@@ -2419,14 +2559,56 @@ struct SplashScreen: View {
             MainTabView().transition(.opacity)
         } else {
             ZStack {
+
+                // Slowly shifting gradient background
                 LinearGradient(
-                    colors: [Color(red: 0.40, green: 0.30, blue: 0.90), Color(red: 0.20, green: 0.10, blue: 0.70)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
+                    colors: [
+                        Color(hue: bgHue, saturation: 0.72, brightness: 0.52),
+                        Color(hue: (bgHue + 0.09).truncatingRemainder(dividingBy: 1.0),
+                              saturation: 0.88, brightness: 0.28),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint:   .bottomTrailing
                 )
                 .ignoresSafeArea()
 
+                // Ambient glow orb (fixed size — no GeometryReader needed)
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color(hue: (bgHue + 0.05).truncatingRemainder(dividingBy: 1.0),
+                                      saturation: 0.75, brightness: 0.95).opacity(0.16),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 250
+                        )
+                    )
+                    .frame(width: 500, height: 500)
+                    .offset(y: -80)
+                    .blendMode(.screen)
+
+                // Floating particles via Canvas (fills screen, no GeometryReader)
+                Canvas { ctx, sz in
+                    for p in particles {
+                        let r = p.2 / 2
+                        let rect = CGRect(
+                            x: sz.width * p.0 - r,
+                            y: sz.height * p.1 - r,
+                            width: p.2, height: p.2
+                        )
+                        ctx.fill(Path(ellipseIn: rect),
+                                 with: .color(Color.white.opacity(p.3)))
+                    }
+                }
+                .ignoresSafeArea()
+
+                // Main content — direct ZStack child so it is always centered
                 VStack(spacing: 20) {
-                    BrainLogoView(size: 100)
+                    HolographicBrainView(size: 120)
+                        .frame(width: 288, height: 200)
                         .opacity(showIcon ? 1 : 0)
                         .scaleEffect(showIcon ? 1 : 0.4)
                         .animation(.spring(response: 0.6, dampingFraction: 0.65), value: showIcon)
@@ -2442,9 +2624,17 @@ struct SplashScreen: View {
                         .offset(y: showSubtitle ? 0 : 8)
                         .animation(.easeOut(duration: 0.6), value: showSubtitle)
                 }
-                .padding(.horizontal, 32)
+            }
+            .onReceive(bgTimer) { _ in
+                bgHue = (bgHue + 0.002).truncatingRemainder(dividingBy: 1.0)
             }
             .onAppear {
+                particles = (0..<20).map { _ in
+                    (CGFloat.random(in: 0.05...0.95),
+                     CGFloat.random(in: 0.05...0.95),
+                     CGFloat.random(in: 2...5),
+                     Double.random(in: 0.08...0.32))
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showIcon = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { showTitle = true }
                 let typingDuration = typingSpeed * Double(titleText.count) + 0.8
