@@ -1048,6 +1048,7 @@ struct InputBar: View {
                         .padding(.vertical, 5)
                         .focused($focused)
                 }
+                .frame(minHeight: 44, maxHeight: 120)
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 22))
 
