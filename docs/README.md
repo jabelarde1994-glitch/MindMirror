@@ -1,6 +1,6 @@
 # Jabe Wellness AI — Project README
 
-_Last updated: 2026-07-29_
+_Last updated: 2026-07-29 (evening — Xcode project cleanup session)_
 
 An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"). Formerly named **MindMirror** — fully renamed to **Jabe Wellness AI** on 2026-06-24. This document is a running reference of the project's architecture, all changes made, decisions taken, and open action items — intended so a new conversation/session can pick up full context quickly.
 
@@ -46,7 +46,13 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 
 ---
 
-## 3. Code Changes & Bug Fixes Log
+## 3. Session Notes — 2026-07-29 (Xcode project file cleanup)
+
+- After the README was first committed (`b2e00b8`), `git status` showed two files reported as **deleted**: `JabeWellnessAI.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings` and `JabeWellnessAI.xcodeproj/xcshareddata/xcschemes/JabeWellnessAI.xcscheme`. Investigated and confirmed **harmless**: the project's *shared* scheme no longer exists on disk (likely reset by Xcode at some point, possibly during the June rename), but a **local user-level scheme** (`xcuserdata/joelreamosioabelarde.xcuserdatad/xcschemes/xcschememanagement.plist`) is present and gitignored by design — this is what Xcode actually uses to build/run/archive on this Mac. App builds, runs, and archives fine; no action needed. This would only matter if the project were ever cloned onto a different machine by another developer.
+- Also found a leftover **`JabeWellnessAI copy.xcodeproj/`** folder at the repo root — an untracked duplicate project generated during the June 24 MindMirror → JabeWellnessAI rename session, never cleaned up. Confirmed unused and **deleted** (`rm -rf`) on 2026-07-29.
+- These two deleted xcshareddata files still show in `git status` as pending deletions (not yet committed as of this note) — safe to commit whenever, since they reflect the actual current state of the working tree.
+
+## 4. Code Changes & Bug Fixes Log
 
 - **Holographic splash screen** — new `HolographicBrainView`: hue-cycling brain colors, 3 pulsing glow halos, neon lightning arcs (Canvas), shimmer sweep, ambient glow orb. Timer-driven (0.05s brain effects, 0.10s background hue). Splash-only, does not replace the existing `BrainLogoView` used elsewhere.
 - **Splash screen centering bug fix** — root cause was `GeometryReader` defaulting to top-leading alignment. Fixed by removing GeometryReader entirely: particles moved to `Canvas`, ambient orb uses a fixed size, and the content `VStack` is a direct `ZStack` child (which centers correctly).
@@ -59,7 +65,7 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 
 ---
 
-## 4. Key Decisions (with rationale)
+## 5. Key Decisions (with rationale)
 
 - **Active chat persistence — Option B chosen:** each app open starts a fresh chat; old conversations remain accessible via the Chat History tab (saved when tapping "New Chat"). Considered Option A (auto-restore last conversation) but Joel deliberately kept Option B — a clean check-in on open fits the wellness-app UX better than resurfacing unfinished emotional conversations. **No code change was made for this.**
 - **Groq API stays free tier at launch** — independent of the Apple Developer account; free tier (30 RPM / 14,400 RPD) is sufficient for early users. Upgrade only if users consistently hit rate limits.
@@ -68,7 +74,7 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 
 ---
 
-## 5. White Paper Corrections Applied
+## 6. White Paper Corrections Applied
 
 - "Human Interference Guidelines" → **"Human Interface Guidelines"**
 - GitHub URL corrected from `MindMirror` → **`JabeWellnessAI`**
@@ -78,7 +84,7 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 
 ---
 
-## 6. Marketing / Video Ad Assets
+## 7. Marketing / Video Ad Assets
 
 Full captions, Claude Design prompts, and the video ad script live in:
 `[Files] Jabe Wellness AI/Jabe Wellness AI - Instagram Captions & Ad Prompts.txt`
@@ -94,7 +100,7 @@ Full captions, Claude Design prompts, and the video ad script live in:
 
 ---
 
-## 7. Security Notes
+## 8. Security Notes
 
 - `SecretsStore.swift` and `*.storekit` are gitignored and confirmed **never committed** to the repo.
 - ⚠️ **Open item:** an old GitHub PAT was exposed in prior chat history and still needs to be regenerated on GitHub.
@@ -102,7 +108,7 @@ Full captions, Claude Design prompts, and the video ad script live in:
 
 ---
 
-## 8. Action Items (current status)
+## 9. Action Items (current status)
 
 1. **[ACCOUNT]** Sign up for Apple Developer Program ($99/year) at developer.apple.com — Joel saving money
 2. **[DONE ✅]** App Store screenshots — 12 per size, iPhone 15 Plus / 16 Plus / 17 Pro Max (completed 2026-07-17)
