@@ -116,8 +116,8 @@ Full captions, Claude Design prompts, and the video ad script live in:
 4. **[ARCHIVE + UPLOAD]** After account: Xcode → Any iOS Device → Product → Archive → Organizer → Distribute App → App Store Connect → Upload
 5. **[SECURITY]** Regenerate GitHub PAT — old PAT was exposed in chat history
 6. **[FUTURE]** WidgetKit extension — new Extension target in Xcode
-7. **[POST-LAUNCH]** AI memory between sessions — premium feature (see Section 4)
-8. **[VIDEO ADS]** Produce and publish 60s cinematic + 15s cut — publish order in Section 6 — do AFTER app ships
+7. **[POST-LAUNCH]** AI memory between sessions — premium feature (see Section 5)
+8. **[VIDEO ADS]** Produce and publish 60s cinematic + 15s cut — publish order in Section 7 — do AFTER app ships
 9. **[MARKETING — PRE-LAUNCH]** Post Claude Design banners on social media to build hype before launch
 10. **[POST-LAUNCH ADS]** Apple Search Ads using the feature graphic/banner — only available after the app is live and the Developer account is active
 
