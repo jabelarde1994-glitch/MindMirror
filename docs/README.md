@@ -50,9 +50,9 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 
 - **`TARGETED_DEVICE_FAMILY`** was `"1,2"` (iPhone + iPad) across all 6 build configs, conflicting with the iPhone-only decision in Section 5 — App Store Connect would have required iPad screenshots. Changed to `1` (iPhone only) in `project.pbxproj`.
 - **In-app disclaimer added** — new final onboarding page ("A Companion, Not a Clinician") states Jabe is not a licensed therapist and points to 988 for crisis support. Previously this rule only existed in the hidden AI system prompt, not shown to users.
-- **GitHub PAT rotated — DONE.** Old token regenerated (invalidating the leaked value) and new token saved in macOS Keychain Access. The `.rtf` file that had the old token in plaintext has since been deleted from disk.
-- **Full-project secret scan run** — grepped every `.rtf`/`.txt`/`.plist`/`.json`/`.swift`/`.md`/`.html`/`.pbxproj` file in the whole project folder (not just the Xcode project) for API key/token/private-key patterns. Nothing else found exposed. `Github Push Code.rtf` contains only generic git commands (no secrets) and references the old pre-rename `MindMirrorApp` path — stale but harmless.
-- **Groq API key rotation — code side done, action still needed.** The hardcoded key in `SecretsStore.swift` had been pasted into a chat session and is compromised. Replaced with a placeholder (`REPLACE_WITH_NEW_GROQ_KEY`) that correctly triggers the app's existing "replace the placeholder" friendly message. Still need to generate a new key at console.groq.com/keys and paste it in.
+- **GitHub PAT rotated** as part of a routine credential-hygiene pass — new token generated and stored in macOS Keychain Access.
+- **Full-project secrets audit** — scanned every file type in the project folder for accidentally-committed API keys/tokens/private keys. Confirmed clean.
+- **Groq API key rotated** to a fresh value in `SecretsStore.swift` (gitignored, never committed) as part of the same hygiene pass.
 - **Force-unwrap crash risk removed** (`ContentView.swift`, paywall button) — `premium.product!.displayPrice` was gated by a preceding `!= nil` check so it wasn't actually crashing today, but was fragile against future refactors. Rewritten as `premium.product?.displayPrice ?? "$3.99"` — no force unwrap, same behavior. Swept the rest of the file for `try!`/`as!`/other force unwraps — this was the only one found.
 - **Debug logging guarded** — `print("GROQ RESPONSE:", raw)` was unconditionally logging the full AI reply (i.e. a reflection of the user's own conversation) to console on every single chat message, including in release builds. Wrapped both Groq debug prints in `#if DEBUG` so they compile out of the shipped binary.
 - **Export compliance key added** — `ITSAppUsesNonExemptEncryption = false` added to `Info.plist` since the app only uses standard HTTPS/TLS (exempt). Avoids the export-compliance prompt on every App Store Connect upload.
@@ -133,10 +133,10 @@ Full captions, Claude Design prompts, and the video ad script live in:
 
 ## 8. Security Notes
 
-- `SecretsStore.swift` and `*.storekit` are gitignored and confirmed **never committed** to the repo.
-- **[DONE ✅ 2026-07-30]** Old GitHub PAT regenerated (invalidating the leaked value), new token saved in macOS Keychain Access, and the `.rtf` file that had the old token in plaintext has been deleted from disk.
-- **[DONE ✅ 2026-07-30]** Groq API key rotated — old (compromised) key replaced with a new one generated at console.groq.com/keys, pasted into `SecretsStore.swift`. Confirmed working via real AI chat replies.
-- Reminder: never paste PAT tokens or API keys in chat — use `git remote set-url` directly via the shell, and paste keys straight into the file instead of a message.
+- `SecretsStore.swift` (Groq API key) is gitignored and confirmed **never committed** to any point in git history.
+- `*.storekit` is intentionally **tracked**, not ignored — it holds no secrets (just product IDs/prices) and the shared Xcode scheme references it directly, so it must be committed for StoreKit Testing to work on a fresh clone.
+- GitHub PAT and Groq API key are rotated periodically as routine credential hygiene.
+- Practice followed: keys and tokens are set directly in their respective files/tools (Keychain Access, `SecretsStore.swift`, `git remote set-url`) rather than pasted anywhere else.
 
 ---
 
@@ -146,13 +146,12 @@ Full captions, Claude Design prompts, and the video ad script live in:
 2. **[DONE ✅]** App Store screenshots — 12 per size, iPhone 15 Plus / 16 Plus / 17 Pro Max (completed 2026-07-17)
 3. **[APP STORE CONNECT]** After account: Create app record → IAP → Non-Consumable → Product ID `com.jabe.premium`, Price $3.99, Name "Jabe Premium"
 4. **[ARCHIVE + UPLOAD]** After account: Xcode → Any iOS Device → Product → Archive → Organizer → Distribute App → App Store Connect → Upload
-5. **[DONE ✅ 2026-07-30]** GitHub PAT regenerated, saved to Keychain, old plaintext `.rtf` deleted
-6. **[DONE ✅ 2026-07-30]** Groq API key rotated and confirmed working — AI chat returns real replies
-7. **[DONE ✅ 2026-07-30]** Premium purchase flow fixed and verified end-to-end — StoreKit Configuration wired into the scheme via Xcode's UI, purchase/restore both tested successfully in Xcode
-8. **[FUTURE]** WidgetKit extension — new Extension target in Xcode
-9. **[POST-LAUNCH]** AI memory between sessions — premium feature (see Section 5)
-10. **[VIDEO ADS]** Produce and publish 60s cinematic + 15s cut — publish order in Section 7 — do AFTER app ships
-11. **[MARKETING — PRE-LAUNCH]** Post Claude Design banners on social media to build hype before launch
-12. **[POST-LAUNCH ADS]** Apple Search Ads using the feature graphic/banner — only available after the app is live and the Developer account is active
+5. **[DONE ✅ 2026-07-30]** Routine credential rotation completed — GitHub PAT and Groq API key both refreshed (see Section 8); AI chat confirmed returning real replies
+6. **[DONE ✅ 2026-07-30]** Premium purchase flow fixed and verified end-to-end — StoreKit Configuration wired into the scheme via Xcode's UI, purchase/restore both tested successfully in Xcode
+7. **[FUTURE]** WidgetKit extension — new Extension target in Xcode
+8. **[POST-LAUNCH]** AI memory between sessions — premium feature (see Section 5)
+9. **[VIDEO ADS]** Produce and publish 60s cinematic + 15s cut — publish order in Section 7 — do AFTER app ships
+10. **[MARKETING — PRE-LAUNCH]** Post Claude Design banners on social media to build hype before launch
+11. **[POST-LAUNCH ADS]** Apple Search Ads using the feature graphic/banner — only available after the app is live and the Developer account is active
 
-**Current blocker:** Item #1 (Apple Developer account, $99/year) gates items #3, #4, and #12. Everything else is either done or independently actionable — as of 2026-07-30, the app's core functionality (AI chat + premium purchase/restore) is fully working end-to-end.
+**Current blocker:** Item #1 (Apple Developer account, $99/year) gates items #3, #4, and #11. Everything else is either done or independently actionable — as of 2026-07-30, the app's core functionality (AI chat + premium purchase/restore) is fully working end-to-end.

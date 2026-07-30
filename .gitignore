@@ -23,4 +23,8 @@ Pods/
 Secrets.swift
 APIKeys.swift
 SecretsStore.swift
-*.storekit
+
+# Note: *.storekit is intentionally NOT ignored — it holds no secrets
+# (just product IDs/prices) and the shared Xcode scheme references it
+# directly, so it must be committed for StoreKit Testing to work on a
+# fresh clone.
