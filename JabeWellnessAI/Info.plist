@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Jabe</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Jabe Wellness AI needs microphone access for voice input.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

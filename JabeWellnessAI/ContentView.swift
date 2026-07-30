@@ -416,6 +416,7 @@ final class PremiumManager: ObservableObject {
     @Published private(set) var isPremium: Bool    = false
     @Published private(set) var product:   Product?
     @Published var showPaywall: Bool = false
+    @Published var purchaseError: String?
 
     // Replace with your App Store Connect product ID before submitting
     private let productID = "com.jabe.premium"
@@ -456,19 +457,58 @@ final class PremiumManager: ObservableObject {
     }
 
     func purchase() async {
-        guard let product else { return }
-        guard let result = try? await product.purchase() else { return }
-        if case .success(let verification) = result,
-           case .verified(_) = verification { isPurchased = true }
+        if product == nil {
+            purchaseError = nil
+            await loadProduct()
+        }
+        guard let product else {
+            if purchaseError == nil {
+                purchaseError = "Store isn't ready yet — please try again in a moment."
+            }
+            return
+        }
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verification):
+                switch verification {
+                case .verified(let transaction):
+                    isPurchased = true
+                    await transaction.finish()
+                case .unverified:
+                    purchaseError = "Your purchase couldn't be verified. Please try again."
+                }
+            case .userCancelled:
+                break
+            case .pending:
+                purchaseError = "Your purchase is pending approval."
+            @unknown default:
+                break
+            }
+        } catch {
+            purchaseError = error.localizedDescription
+        }
     }
 
     func restorePurchases() async {
-        try? await AppStore.sync()
+        do {
+            try await AppStore.sync()
+        } catch {
+            purchaseError = error.localizedDescription
+        }
         await restoreIfNeeded()
     }
 
     private func loadProduct() async {
-        product = try? await Product.products(for: [productID]).first
+        do {
+            let products = try await Product.products(for: [productID])
+            product = products.first
+            if product == nil {
+                purchaseError = "Product '\(productID)' wasn't found. Check that a StoreKit Configuration file is selected in Xcode's scheme (Edit Scheme → Run → Options), or that this product exists in App Store Connect."
+            }
+        } catch {
+            purchaseError = "Couldn't load the product from the store: \(error.localizedDescription)"
+        }
     }
 
     private func restoreIfNeeded() async {
@@ -658,8 +698,10 @@ final class AIService {
 
         guard let http = response as? HTTPURLResponse else { return "Invalid server response." }
 
+        #if DEBUG
         print("GROQ STATUS:", http.statusCode)
         if let raw = String(data: data, encoding: .utf8) { print("GROQ RESPONSE:", raw) }
+        #endif
 
         guard http.statusCode == 200 else {
             switch http.statusCode {
@@ -1444,7 +1486,10 @@ struct OnboardingView: View {
                  icon: "face.smiling.fill", color: Color(red: 0.95, green: 0.55, blue: 0.15)),
         PageData(title: "Keep a Journal",
                  subtitle: "Reflect on your day and save mood-linked entries to see your emotional journey.",
-                 icon: "book.fill", color: Color(red: 0.12, green: 0.60, blue: 0.35))
+                 icon: "book.fill", color: Color(red: 0.12, green: 0.60, blue: 0.35)),
+        PageData(title: "A Companion,\nNot a Clinician",
+                 subtitle: "Jabe is an AI wellness companion, not a licensed therapist or medical provider. If you're in crisis, call or text 988 (Suicide & Crisis Lifeline) anytime.",
+                 icon: "heart.text.square.fill", color: Color(red: 0.75, green: 0.30, blue: 0.35))
     ]
 
     var body: some View {
@@ -2218,9 +2263,7 @@ struct PremiumPaywallView: View {
                                 if isPurchasing {
                                     ProgressView().tint(.white)
                                 } else {
-                                    Text(premium.product != nil
-                                         ? "Unlock for \(premium.product!.displayPrice)"
-                                         : "Unlock Premium — $3.99")
+                                    Text("Unlock for \(premium.product?.displayPrice ?? "$3.99")")
                                     .fontWeight(.semibold)
                                 }
                             }
@@ -2254,6 +2297,17 @@ struct PremiumPaywallView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 36)
+                }
+                .alert(
+                    "Purchase Failed",
+                    isPresented: Binding(
+                        get: { premium.purchaseError != nil },
+                        set: { if !$0 { premium.purchaseError = nil } }
+                    )
+                ) {
+                    Button("OK", role: .cancel) { premium.purchaseError = nil }
+                } message: {
+                    Text(premium.purchaseError ?? "")
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

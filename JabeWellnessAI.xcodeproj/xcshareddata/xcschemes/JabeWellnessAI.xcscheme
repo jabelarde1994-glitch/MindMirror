@@ -74,10 +74,6 @@
             ReferencedContainer = "container:JabeWellnessAI.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <LocationScenarioReference
-         identifier = "com.apple.dt.IDEFoundation.CurrentLocationScenarioIdentifier"
-         referenceType = "1">
-      </LocationScenarioReference>
       <StoreKitConfigurationFileReference
          identifier = "../../JabeWellnessAI/Storekit.storekit">
       </StoreKitConfigurationFileReference>

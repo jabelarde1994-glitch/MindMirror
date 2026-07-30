@@ -1,6 +1,6 @@
 # Jabe Wellness AI — Project README
 
-_Last updated: 2026-07-29 (evening — Xcode project cleanup session)_
+_Last updated: 2026-07-30 (Apple review prep, security rotation, and purchase-flow fix — AI chat and premium purchase both verified working end-to-end)_
 
 An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"). Formerly named **MindMirror** — fully renamed to **Jabe Wellness AI** on 2026-06-24. This document is a running reference of the project's architecture, all changes made, decisions taken, and open action items — intended so a new conversation/session can pick up full context quickly.
 
@@ -45,6 +45,37 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 | Settings, theming | Journal Export (ShareSheet) |
 
 ---
+
+## 3a. Session Notes — 2026-07-30 (Apple review prep fixes)
+
+- **`TARGETED_DEVICE_FAMILY`** was `"1,2"` (iPhone + iPad) across all 6 build configs, conflicting with the iPhone-only decision in Section 5 — App Store Connect would have required iPad screenshots. Changed to `1` (iPhone only) in `project.pbxproj`.
+- **In-app disclaimer added** — new final onboarding page ("A Companion, Not a Clinician") states Jabe is not a licensed therapist and points to 988 for crisis support. Previously this rule only existed in the hidden AI system prompt, not shown to users.
+- **GitHub PAT rotated — DONE.** Old token regenerated (invalidating the leaked value) and new token saved in macOS Keychain Access. The `.rtf` file that had the old token in plaintext has since been deleted from disk.
+- **Full-project secret scan run** — grepped every `.rtf`/`.txt`/`.plist`/`.json`/`.swift`/`.md`/`.html`/`.pbxproj` file in the whole project folder (not just the Xcode project) for API key/token/private-key patterns. Nothing else found exposed. `Github Push Code.rtf` contains only generic git commands (no secrets) and references the old pre-rename `MindMirrorApp` path — stale but harmless.
+- **Groq API key rotation — code side done, action still needed.** The hardcoded key in `SecretsStore.swift` had been pasted into a chat session and is compromised. Replaced with a placeholder (`REPLACE_WITH_NEW_GROQ_KEY`) that correctly triggers the app's existing "replace the placeholder" friendly message. Still need to generate a new key at console.groq.com/keys and paste it in.
+- **Force-unwrap crash risk removed** (`ContentView.swift`, paywall button) — `premium.product!.displayPrice` was gated by a preceding `!= nil` check so it wasn't actually crashing today, but was fragile against future refactors. Rewritten as `premium.product?.displayPrice ?? "$3.99"` — no force unwrap, same behavior. Swept the rest of the file for `try!`/`as!`/other force unwraps — this was the only one found.
+- **Debug logging guarded** — `print("GROQ RESPONSE:", raw)` was unconditionally logging the full AI reply (i.e. a reflection of the user's own conversation) to console on every single chat message, including in release builds. Wrapped both Groq debug prints in `#if DEBUG` so they compile out of the shipped binary.
+- **Export compliance key added** — `ITSAppUsesNonExemptEncryption = false` added to `Info.plist` since the app only uses standard HTTPS/TLS (exempt). Avoids the export-compliance prompt on every App Store Connect upload.
+
+## 3b. Session Notes — 2026-07-30 (manual QA found a real purchase bug — fixed)
+
+- **Manually tested in Xcode (Joel):** confirmed the Groq placeholder message (expected, see 3a) and found premium purchase genuinely failing silently — tapping "Unlock for $3.99" did nothing, no error, no purchase sheet.
+- **Root cause #1 — missing shared scheme.** The shared `.xcscheme` file had gone missing at some point (first noticed in Section 3, 2026-07-29) and was never recreated, so Xcode had nothing wiring `Storekit.storekit` to the Run action. Without that, `Product.products(for:)` was hitting the real App Store instead of the local test config, which fails in the Simulator with no sandbox tester signed in. **Fixed:** recreated `JabeWellnessAI.xcodeproj/xcshareddata/xcschemes/JabeWellnessAI.xcscheme` with a `StoreKitConfigurationFileReference` pointing at `Storekit.storekit`, plus proper Test/Profile/Archive actions.
+- **Root cause #2 — silent error swallowing in `PremiumManager.purchase()`.** It used `try? await product.purchase()`, so any thrown error (or `.userCancelled`/`.pending` result) was discarded with no feedback — this is why the button just did nothing. **Fixed:** rewritten to handle every `PurchaseResult` case and surface real errors via a new `purchaseError` published property, shown as an alert on the paywall.
+- **Also fixed — missing `transaction.finish()`.** After a verified purchase, the old code never called `transaction.finish()`. StoreKit 2 requires this; skipping it leaves transactions permanently "unfinished," which Apple review flags as improper IAP handling (relevant directly to the Apple review checklist's IAP requirement). Added `await transaction.finish()` on the verified-transaction path.
+- **`restorePurchases()`** — same `try?`-swallowing issue, now also surfaces errors via `purchaseError`.
+- **Rebuilt after all fixes — BUILD SUCCEEDED**, no new compiler errors introduced.
+- **Reviewed while in there, no issues found:** `VoiceInputManager` mic/speech permission-denial flow (already shows a proper alert), `StorageManager`, `StreakManager`.
+- **Still to do:** re-test the purchase flow in Xcode now that the scheme exists (Product → Run), and generate the new Groq key (see 3a) — the AI chat still won't respond until that's done.
+
+## 3c. Session Notes — 2026-07-30 (Groq key rotated + purchase flow fully verified end-to-end)
+
+- **New Groq API key added — DONE.** Joel generated a new key at console.groq.com/keys and pasted it into `SecretsStore.swift`, replacing the `REPLACE_WITH_NEW_GROQ_KEY` placeholder. Confirmed working: AI chat now returns real Groq-generated replies instead of the placeholder message.
+- **Purchase flow — root cause fully resolved.** My hand-authored `StoreKitConfigurationFileReference` in the shared `.xcscheme` (see 3b) turned out not to be enough on its own — after rebuilding, Xcode still reported "Product 'com.jabe.premium' wasn't found," meaning the StoreKit config still wasn't actually wired into the running scheme. Fixed properly by setting it through Xcode's own UI: **Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration → `Storekit.storekit`.** Xcode rewrote the scheme's `StoreKitConfigurationFileReference` itself with a different (correct) relative path than my hand-written one — confirms Xcode's own path-resolution for this element isn't safe to hand-author; always set it via the UI, not by editing the `.xcscheme` XML directly.
+- **A duplicate "Storekit.storekit" briefly appeared in the StoreKit Configuration dropdown** while debugging this — confirmed via a full project scan that only one physical `.storekit` file and one project file-reference exist, so it was a stale Xcode UI/DerivedData cache artifact, not a real duplicate. Not a project issue; clears on its own or after a DerivedData wipe.
+- **Purchase flow confirmed fully working (2026-07-30, tested by Joel in Xcode):** tapped "Unlock for $3.99" → real StoreKit Testing purchase sheet appeared → completed with Apple's own "You're all set — [Environment: Xcode]" confirmation → paywall auto-dismissed → trial banner gone → **Restore Purchase** also tested and works cleanly.
+- **Also found and fixed along the way:** `purchaseError` was being set with a specific, useful diagnostic message inside `loadProduct()`, then immediately overwritten by a generic "Store isn't ready yet" message in `purchase()`'s fallback guard right after — masking the real reason for a failure. Fixed so the guard only sets the generic message if nothing more specific was already set.
+- **Status: both the AI chat and the premium purchase flow (including restore) are now fully functional and verified**, closing out the two remaining functional blockers from the Apple review prep pass.
 
 ## 3. Session Notes — 2026-07-29 (Xcode project file cleanup)
 
@@ -103,8 +134,9 @@ Full captions, Claude Design prompts, and the video ad script live in:
 ## 8. Security Notes
 
 - `SecretsStore.swift` and `*.storekit` are gitignored and confirmed **never committed** to the repo.
-- ⚠️ **Open item:** an old GitHub PAT was exposed in prior chat history and still needs to be regenerated on GitHub.
-- Reminder: never paste PAT tokens in chat — use `git remote set-url` directly via the shell.
+- **[DONE ✅ 2026-07-30]** Old GitHub PAT regenerated (invalidating the leaked value), new token saved in macOS Keychain Access, and the `.rtf` file that had the old token in plaintext has been deleted from disk.
+- **[DONE ✅ 2026-07-30]** Groq API key rotated — old (compromised) key replaced with a new one generated at console.groq.com/keys, pasted into `SecretsStore.swift`. Confirmed working via real AI chat replies.
+- Reminder: never paste PAT tokens or API keys in chat — use `git remote set-url` directly via the shell, and paste keys straight into the file instead of a message.
 
 ---
 
@@ -114,11 +146,13 @@ Full captions, Claude Design prompts, and the video ad script live in:
 2. **[DONE ✅]** App Store screenshots — 12 per size, iPhone 15 Plus / 16 Plus / 17 Pro Max (completed 2026-07-17)
 3. **[APP STORE CONNECT]** After account: Create app record → IAP → Non-Consumable → Product ID `com.jabe.premium`, Price $3.99, Name "Jabe Premium"
 4. **[ARCHIVE + UPLOAD]** After account: Xcode → Any iOS Device → Product → Archive → Organizer → Distribute App → App Store Connect → Upload
-5. **[SECURITY]** Regenerate GitHub PAT — old PAT was exposed in chat history
-6. **[FUTURE]** WidgetKit extension — new Extension target in Xcode
-7. **[POST-LAUNCH]** AI memory between sessions — premium feature (see Section 5)
-8. **[VIDEO ADS]** Produce and publish 60s cinematic + 15s cut — publish order in Section 7 — do AFTER app ships
-9. **[MARKETING — PRE-LAUNCH]** Post Claude Design banners on social media to build hype before launch
-10. **[POST-LAUNCH ADS]** Apple Search Ads using the feature graphic/banner — only available after the app is live and the Developer account is active
+5. **[DONE ✅ 2026-07-30]** GitHub PAT regenerated, saved to Keychain, old plaintext `.rtf` deleted
+6. **[DONE ✅ 2026-07-30]** Groq API key rotated and confirmed working — AI chat returns real replies
+7. **[DONE ✅ 2026-07-30]** Premium purchase flow fixed and verified end-to-end — StoreKit Configuration wired into the scheme via Xcode's UI, purchase/restore both tested successfully in Xcode
+8. **[FUTURE]** WidgetKit extension — new Extension target in Xcode
+9. **[POST-LAUNCH]** AI memory between sessions — premium feature (see Section 5)
+10. **[VIDEO ADS]** Produce and publish 60s cinematic + 15s cut — publish order in Section 7 — do AFTER app ships
+11. **[MARKETING — PRE-LAUNCH]** Post Claude Design banners on social media to build hype before launch
+12. **[POST-LAUNCH ADS]** Apple Search Ads using the feature graphic/banner — only available after the app is live and the Developer account is active
 
-**Current blocker:** Item #1 (Apple Developer account, $99/year) gates items #3, #4, and #10. Everything else is either done or independently actionable.
+**Current blocker:** Item #1 (Apple Developer account, $99/year) gates items #3, #4, and #12. Everything else is either done or independently actionable — as of 2026-07-30, the app's core functionality (AI chat + premium purchase/restore) is fully working end-to-end.
