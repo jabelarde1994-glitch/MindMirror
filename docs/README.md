@@ -1,6 +1,6 @@
 # Jabe Wellness AI — Project README
 
-_Last updated: 2026-07-30 (Apple review prep, security rotation, and purchase-flow fix — AI chat and premium purchase both verified working end-to-end)_
+_Last updated: 2026-07-30 (Apple review prep, security rotation, purchase-flow fix, and repo hardening ahead of launch)_
 
 An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"). Formerly named **MindMirror** — fully renamed to **Jabe Wellness AI** on 2026-06-24. This document is a running reference of the project's architecture, all changes made, decisions taken, and open action items — intended so a new conversation/session can pick up full context quickly.
 
@@ -16,7 +16,7 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 | Bundle ID | `com.jabe.wellnessai` |
 | StoreKit product | `com.jabe.premium` — $3.99 one-time, 7-day free trial |
 | AI backend | Groq API, `llama-3.3-70b-versatile` (free tier: 30 RPM / 14,400 RPD) |
-| GitHub | https://github.com/jabelarde1994-glitch/JabeWellnessAI |
+| GitHub | https://github.com/jabelarde1994-glitch/JabeWellnessAI (private since 2026-07-30, pre-launch) |
 | Local repo path | `/Users/joelreamosioabelarde/Documents/Jabe - Project/[Code] Jabe Wellness AI/` |
 | White paper | `[Files] Jabe Wellness AI/ Jabe Wellness AI - White Paper & Application Structure.docx` (+ .pdf) |
 
@@ -76,6 +76,13 @@ An iOS emotional wellness AI chatbot built with SwiftUI by Joel Abelarde ("Jabe"
 - **Purchase flow confirmed fully working (2026-07-30, tested by Joel in Xcode):** tapped "Unlock for $3.99" → real StoreKit Testing purchase sheet appeared → completed with Apple's own "You're all set — [Environment: Xcode]" confirmation → paywall auto-dismissed → trial banner gone → **Restore Purchase** also tested and works cleanly.
 - **Also found and fixed along the way:** `purchaseError` was being set with a specific, useful diagnostic message inside `loadProduct()`, then immediately overwritten by a generic "Store isn't ready yet" message in `purchase()`'s fallback guard right after — masking the real reason for a failure. Fixed so the guard only sets the generic message if nothing more specific was already set.
 - **Status: both the AI chat and the premium purchase flow (including restore) are now fully functional and verified**, closing out the two remaining functional blockers from the Apple review prep pass.
+
+## 3d. Session Notes — 2026-07-30 (repo hardening ahead of launch)
+
+- **`*.storekit` un-ignored and committed.** It had been gitignored alongside `SecretsStore.swift`, but it holds no secrets (just product IDs/prices) — and since the shared Xcode scheme now references it directly (see 3c), a fresh clone was missing a file the scheme depends on. Fixed by removing it from `.gitignore` and committing `Storekit.storekit`.
+- **README trimmed for public visibility** (at the time) — the security-notes sections previously narrated the specific credential-exposure incidents (which chat, which file, which flag). Since GitHub visibility was public at that point, reworded those sections to describe general credential-hygiene practices instead, while keeping all the substantive engineering write-ups (StoreKit debugging, purchase-flow fixes) in full detail.
+- **Broken global git credential helper removed.** `~/.gitconfig` had a leftover `credential.https://github.com.helper` override from an unrelated prior session, pointing to a `gh` CLI binary in a deleted temp scratchpad path. It silently broke every `git push`/`pull` for this repo by shadowing the working `osxkeychain` helper. Joel removed it directly (`git config --global --unset-all ...`) — pushes now work normally without any workaround.
+- **GitHub repository made private.** App hasn't launched yet, and there's no upside to public visibility pre-launch — flipped from public to private via repo Settings → Danger Zone. Confirmed via the GitHub API (unauthenticated requests now get `404`, as expected for a private repo). Local push/pull access is completely unaffected by this — only visibility to others changes. GitHub Pages was confirmed **not** enabled on this repo beforehand, so this had no effect on the Apple-submission privacy policy URL (which isn't hosted from here).
 
 ## 3. Session Notes — 2026-07-29 (Xcode project file cleanup)
 
@@ -137,6 +144,7 @@ Full captions, Claude Design prompts, and the video ad script live in:
 - `*.storekit` is intentionally **tracked**, not ignored — it holds no secrets (just product IDs/prices) and the shared Xcode scheme references it directly, so it must be committed for StoreKit Testing to work on a fresh clone.
 - GitHub PAT and Groq API key are rotated periodically as routine credential hygiene.
 - Practice followed: keys and tokens are set directly in their respective files/tools (Keychain Access, `SecretsStore.swift`, `git remote set-url`) rather than pasted anywhere else.
+- **GitHub repo is private** (set 2026-07-30, pre-launch) — will likely go public again after the app ships, at which point this section should be re-reviewed for anything worth trimming before doing so.
 
 ---
 
@@ -153,5 +161,7 @@ Full captions, Claude Design prompts, and the video ad script live in:
 9. **[VIDEO ADS]** Produce and publish 60s cinematic + 15s cut — publish order in Section 7 — do AFTER app ships
 10. **[MARKETING — PRE-LAUNCH]** Post Claude Design banners on social media to build hype before launch
 11. **[POST-LAUNCH ADS]** Apple Search Ads using the feature graphic/banner — only available after the app is live and the Developer account is active
+12. **[DONE ✅ 2026-07-30]** Removed a stale/broken global git credential helper override that was blocking pushes (see Section 3d)
+13. **[DONE ✅ 2026-07-30]** Made the GitHub repository private ahead of launch (see Section 3d) — revisit going public again post-launch
 
 **Current blocker:** Item #1 (Apple Developer account, $99/year) gates items #3, #4, and #11. Everything else is either done or independently actionable — as of 2026-07-30, the app's core functionality (AI chat + premium purchase/restore) is fully working end-to-end.
