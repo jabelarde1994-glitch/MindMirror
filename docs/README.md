@@ -5,7 +5,7 @@
 <h1 align="center">Jabe Wellness AI</h1>
 <p align="center"><em>Your Emotional Wellness Companion</em></p>
 
-    Jabe Wellness AI is an iOS emotional wellness companion built with SwiftUI. Users talk naturally with Jabe as they would a trusted friend. Powered by a large language model (LLM), Jabe provides empathetic conversations, mood tracking, guided wellness exercises, and journaling.
+Jabe Wellness AI is an iOS emotional wellness companion built with SwiftUI. Users talk naturally with Jabe as they would a trusted friend. Powered by a large language model (LLM), Jabe provides empathetic conversations, mood tracking, guided wellness exercises, and journaling.
 
 Unlike meditation timer apps or scripted wellness chatbots, Jabe delivers genuine open-ended AI conversations tailored to each interaction.
 
