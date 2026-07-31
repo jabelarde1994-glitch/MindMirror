@@ -35,7 +35,7 @@ Formerly named **MindMirror** — renamed to **Jabe Wellness AI** on 2026-06-24.
 - Chat history, Journal
 - Settings, theming
 
-### Premium ($3.99 one-time, 7-day trial)**
+### Premium ($3.99 one-time, 7-day trial)
 - Mood Trends Chart (7-day)
 - Streak tracking
 - AI Weekly Insights
@@ -64,7 +64,7 @@ See [MARKETING.md](MARKETING.md) for the complete marketing asset inventory and 
    ```
 2. Open `JabeWellnessAI.xcodeproj` in Xcode 26+.
 3. Create the (gitignored) secrets file — a fresh clone will **not** build without this:
-   `JabeWellnessAI/Create SecretsStore.swift`
+   `JabeWellnessAI/SecretsStore.swift`
    ```swift
    enum SecretsStore {
        static let groqAPIKey = "gsk_YOUR_KEY_HERE"
