@@ -8,6 +8,13 @@ _Part of the [Jabe Wellness AI](README.md) doc set. Reverse-chronological, group
 - **Broken unit test target** — `JabeWellnessAITests.swift` still had `@testable import MindMirrorApp`, left over from the June 24 rename to JabeWellnessAI. The module no longer exists, so `xcodebuild build-for-testing` failed outright (confirmed by running it). The main app target itself built and archived fine — this only broke running the unit test suite / any CI that runs tests. Fixed the import and also renamed the stale `MindMirrorApp{,UITests,UITestsLaunchTests}` struct/class names across all three test files to match. Re-ran `build-for-testing` — now succeeds.
 - **History tab could show sections out of chronological order** — `HistoryView.grouped` (`ContentView.swift`) grouped chat sessions by their `.medium`-formatted date **string** (e.g. `"Aug 1, 2026"`) and sorted those strings alphabetically. Month abbreviations don't sort alphabetically in calendar order (e.g. `"Jul 20, 2026" > "Aug 1, 2026"` as strings, since `J` > `A`), so once sessions spanned a month boundary, an older month's section could appear above a more recent one. Fixed by grouping on `Calendar.current.startOfDay(for:)` (an actual `Date`) and formatting only for the section header display text — sort order is now always correct regardless of month.
 
+### UI Test Coverage
+- Added permanent regression coverage in `JabeWellnessAIUITests.swift`, replacing the empty template test. Verified live on an iPhone 17 Pro Max simulator (`xcodebuild test`), all passing:
+  - `testChatSendAndNavigateTabs` — sends a chat message, confirms mood detection and a real AI reply bubble appear, starts a new chat, then cycles through every tab.
+  - `testHistoryShowsSavedSessions` — sends a message, archives it via New Chat, then confirms the session shows up in Insights → Chat History and opens its detail view. Directly guards against the date-grouping regression above.
+  - `testLaunchPerformance` (pre-existing) — app launches in ~1.55s average on simulator.
+  - Interactions use SF Symbol default accessibility labels (`"Up"` for the send button, `"Comment"` for new-chat) rather than hardcoded coordinates — coordinates broke once the on-screen keyboard shifted the input bar up during earlier manual testing.
+
 ## 2026-07-30
 
 ### Repository Hardening
