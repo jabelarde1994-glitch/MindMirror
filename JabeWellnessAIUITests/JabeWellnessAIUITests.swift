@@ -1,13 +1,13 @@
 //
-//  MindMirrorAppUITests.swift
-//  MindMirrorAppUITests
+//  JabeWellnessAIUITests.swift
+//  JabeWellnessAIUITests
 //
 //  Created by Joel Reamosio Abelarde on 5/13/26.
 //
 
 import XCTest
 
-final class MindMirrorAppUITests: XCTestCase {
+final class JabeWellnessAIUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

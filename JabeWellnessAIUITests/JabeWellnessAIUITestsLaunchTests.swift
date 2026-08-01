@@ -1,13 +1,13 @@
 //
-//  MindMirrorAppUITestsLaunchTests.swift
-//  MindMirrorAppUITests
+//  JabeWellnessAIUITestsLaunchTests.swift
+//  JabeWellnessAIUITests
 //
 //  Created by Joel Reamosio Abelarde on 5/13/26.
 //
 
 import XCTest
 
-final class MindMirrorAppUITestsLaunchTests: XCTestCase {
+final class JabeWellnessAIUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

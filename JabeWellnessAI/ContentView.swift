@@ -1253,8 +1253,8 @@ struct HistoryView: View {
         let f = DateFormatter(); f.dateStyle = .medium; return f
     }()
 
-    private var grouped: [(String, [ChatSession])] {
-        Dictionary(grouping: storage.sessions) { Self.dateFmt.string(from: $0.date) }
+    private var grouped: [(Date, [ChatSession])] {
+        Dictionary(grouping: storage.sessions) { Calendar.current.startOfDay(for: $0.date) }
             .sorted { $0.key > $1.key }
     }
 
@@ -1274,7 +1274,7 @@ struct HistoryView: View {
                 } else {
                     List {
                         ForEach(grouped, id: \.0) { date, sessions in
-                            Section(header: Text(date)) {
+                            Section(header: Text(Self.dateFmt.string(from: date))) {
                                 ForEach(sessions) { session in
                                     Button { selectedSession = session } label: {
                                         HStack(spacing: 12) {
