@@ -1,6 +1,6 @@
 # Roadmap
 
-_Part of the [Jabe Wellness AI](README.md) doc set. Current status as of 2026-07-30._
+_Part of the [Jabe Wellness AI](README.md) doc set. Current status as of 2026-08-01._
 
 ## Blocking
 
@@ -31,9 +31,11 @@ Full submission checklist in [APPLE_REVIEW.md](APPLE_REVIEW.md).
 - ✅ Premium purchase flow fixed and verified end-to-end — StoreKit Configuration wired into the scheme via Xcode's UI, purchase/restore both tested (2026-07-30)
 - ✅ Removed a stale/broken global git credential helper that was blocking pushes (2026-07-30)
 - ✅ Made the GitHub repository private ahead of launch (2026-07-30) — revisit going public again post-launch
+- ✅ Fixed broken unit test target (stale `MindMirrorApp` module import from the June rename) and a History-tab chronological-ordering bug (2026-08-01), see [CHANGELOG.md](CHANGELOG.md)
+- ✅ Added permanent UI test regression coverage — chat send/mood detection/tab navigation and History session persistence, verified live on simulator (2026-08-01), see [CHANGELOG.md](CHANGELOG.md)
 
 Full history in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-**Current blocker:** Apple Developer Program account gates App Store Connect setup, archive/upload, and Search Ads. Everything else is done or independently actionable — as of 2026-07-30, the app's core functionality (AI chat + premium purchase/restore) is fully working end-to-end.
+**Current blocker:** Apple Developer Program account gates App Store Connect setup, archive/upload, and Search Ads. Everything else is done or independently actionable — as of 2026-08-01, the app's core functionality (AI chat + premium purchase/restore) is fully working end-to-end.
