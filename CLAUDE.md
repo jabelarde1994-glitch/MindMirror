@@ -9,7 +9,7 @@
 ## Important Files
 
 - `JabeWellnessAI/ContentView.swift` — the entire app: `ChatMessage`/`ChatSession`/`JournalEntry` models, `JournalViewModel`, `AIService`, `StorageManager`, `StreakManager`, `PremiumManager`, `VoiceInputManager`, all views
-- `JabeWellnessAI/SecretsStore.swift` — gitignored, holds the Groq API key. Never read this file into a chat session — a prior key was rotated specifically because it had been pasted into one.
+- `JabeWellnessAI/SecretsStore.swift` — gitignored, holds the Groq API key. **Never read, cat, grep, or print this file's contents in a chat session, in any tool call, for any reason** — two separate keys have already been rotated specifically because they ended up pasted into a chat. If the key needs to change: ask the user to edit the file directly in their own editor (never paste the key into chat), then verify it works by building the app and running `JabeWellnessAIUITests/testChatSendAndNavigateTabs` (sends a real chat message, asserts a genuine AI reply appears) — this confirms the key works without ever reading the file. Exposure to a chat session is treated as compromised regardless of whether it ever reached GitHub — the transcript itself is the exposure surface.
 - `JabeWellnessAI/Storekit.storekit` — StoreKit Testing config; intentionally committed (no secrets, just product IDs/prices)
 - `JabeWellnessAI/Info.plist`, `JabeWellnessAI.entitlements`
 
@@ -26,6 +26,15 @@
 - iPhone only (`TARGETED_DEVICE_FAMILY = 1`) — see [docs/DECISIONS.md](docs/DECISIONS.md) before reintroducing iPad support
 - StoreKit Configuration must be set via **Xcode → Edit Scheme → Run → Options → StoreKit Configuration**, not by hand-editing `.xcscheme` XML — Xcode's relative-path resolution for that field isn't safe to author manually
 
+## Testing
+
+- Unit tests (`JabeWellnessAITests`, fast, no network): `xcodebuild test -project JabeWellnessAI.xcodeproj -scheme JabeWellnessAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' -only-testing:JabeWellnessAITests`
+- UI tests (`JabeWellnessAIUITests`, hit the real Groq API, ~30s+ each): same command with `-only-testing:JabeWellnessAIUITests`
+- For any bug fix: write a failing unit test that reproduces it first, confirm it fails, then fix, then confirm it passes — don't fix from a hunch
+- For any change to `ContentView.swift` model/view-model logic (not just UI): add or extend a unit test in `JabeWellnessAITests.swift` covering it
+- For any visible UI change: build and launch on the simulator (`xcrun simctl`) and confirm visually before claiming it's done — type-checking isn't feature verification
+- `JabeWellnessAITests.swift` uses Swift Testing (`import Testing`, `@Test`, `#expect`), not XCTest
+
 ## Coding Style
 
 - Match existing SwiftUI patterns in `ContentView.swift`
@@ -40,3 +49,13 @@ App Store launch — blocked on the Apple Developer Program account signup (see 
 ## Docs
 
 Full doc set lives in `docs/`: README (overview), ARCHITECTURE, DECISIONS, CHANGELOG, APPLE_REVIEW, ROADMAP, SECURITY, MARKETING, WHITEPAPER.
+
+## Non-Repo Assets
+
+Two sibling folders outside this repo (`../[Files] Jabe Wellness AI`, `../[Screenshots:Video] Jabe Wellness AI Project`) hold marketing collateral (whitepaper, deck, portfolio, App Store screenshot panels/banners). They are **not** part of this git repo and are never touched by a commit/push here. Don't assume they need updating for a code change unless the change is visible on-screen or contradicts something they specifically describe — check before editing, most fixes affect neither.
+
+## Git
+
+- Only commit or push when explicitly asked — never proactively
+- Match the existing log style: short, root-cause-focused subject line (what broke and why, not just what changed); body explains impact and how it was verified
+- Never force-push, amend a pushed commit, or skip hooks without being explicitly told to
