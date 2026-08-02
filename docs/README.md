@@ -47,9 +47,7 @@ Formerly named **MindMirror** — renamed to **Jabe Wellness AI** on 2026-06-24.
 
 ## Screenshots
 
-App Store screenshots have been completed for all supported device sizes.
-
-They will be added to the `docs/screenshots/` directory before the repository is made public.
+App Store screenshots have been completed for all supported device sizes, managed outside this repository.
 
 ---
 
@@ -101,7 +99,7 @@ JabeWellnessAI/
 │   └── Assets.xcassets/                 # App icon, accent color
 ├── JabeWellnessAITests/                 # Unit tests
 ├── JabeWellnessAIUITests/               # UI tests
-└── docs/                                # This documentation set
+└── docs/                                # README (this file) + App Store privacy policy page
 ```
 
 ---
