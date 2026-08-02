@@ -23,7 +23,7 @@
 ## Build
 
 - Xcode 26.0.1, Swift 5.0, deployment target iOS 17.0+
-- iPhone only (`TARGETED_DEVICE_FAMILY = 1`) — see [docs/DECISIONS.md](docs/DECISIONS.md) before reintroducing iPad support
+- iPhone only (`TARGETED_DEVICE_FAMILY = 1`) — this was a deliberate decision; don't reintroduce iPad support without discussing it first
 - StoreKit Configuration must be set via **Xcode → Edit Scheme → Run → Options → StoreKit Configuration**, not by hand-editing `.xcscheme` XML — Xcode's relative-path resolution for that field isn't safe to author manually
 
 ## Testing
@@ -44,11 +44,11 @@
 
 ## Current Priority
 
-App Store launch — blocked on the Apple Developer Program account signup (see [docs/ROADMAP.md](docs/ROADMAP.md)). AI chat and premium purchase/restore are fully functional and verified as of 2026-07-30.
+App Store launch — blocked on the Apple Developer Program account signup. AI chat and premium purchase/restore are fully functional and verified as of 2026-07-30.
 
 ## Docs
 
-Full doc set lives in `docs/`: README (overview), ARCHITECTURE, DECISIONS, CHANGELOG, APPLE_REVIEW, ROADMAP, SECURITY, MARKETING, WHITEPAPER.
+Only `README.md` (project overview) and `privacy.html` (App Store privacy policy page) are tracked in git under `docs/`. The other planning/engineering docs (ARCHITECTURE, DECISIONS, CHANGELOG, APPLE_REVIEW, ROADMAP, SECURITY, MARKETING, WHITEPAPER) still physically live in `docs/` on disk and are still useful local context to read — they were untracked from git and added to `.gitignore` on 2026-08-03 so GitHub only shows the public-facing README, **not deleted**. Don't `git add` them or push them, and don't delete them from disk without being explicitly asked.
 
 ## Non-Repo Assets
 

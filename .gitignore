@@ -28,3 +28,14 @@ SecretsStore.swift
 # (just product IDs/prices) and the shared Xcode scheme references it
 # directly, so it must be committed for StoreKit Testing to work on a
 # fresh clone.
+
+# Internal planning/engineering docs — kept locally for reference, not
+# pushed to GitHub. docs/README.md and docs/privacy.html stay tracked.
+docs/ARCHITECTURE.md
+docs/DECISIONS.md
+docs/CHANGELOG.md
+docs/APPLE_REVIEW.md
+docs/ROADMAP.md
+docs/SECURITY.md
+docs/MARKETING.md
+docs/WHITEPAPER.md

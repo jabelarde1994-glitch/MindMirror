@@ -21,7 +21,7 @@ Formerly named **MindMirror** — renamed to **Jabe Wellness AI** on 2026-06-24.
 | Bundle ID | `com.jabe.wellnessai` |
 | StoreKit product | `com.jabe.premium` — $3.99 one-time, 7-day free trial |
 | AI backend | Groq API, `llama-3.3-70b-versatile` |
-| Status | Core functionality complete. App Store submission pending Apple Developer account (see ROADMAP.md). |
+| Status | Core functionality complete. App Store submission pending Apple Developer account. |
 
 ---
 
@@ -51,8 +51,6 @@ App Store screenshots have been completed for all supported device sizes.
 
 They will be added to the `docs/screenshots/` directory before the repository is made public.
 
-See [MARKETING.md](MARKETING.md) for the complete marketing asset inventory and publishing plan.
-
 ---
 
 ## Installation
@@ -77,7 +75,7 @@ See [MARKETING.md](MARKETING.md) for the complete marketing asset inventory and 
 ## Build Instructions
 
 1. Select the **JabeWellnessAI** scheme and an iPhone simulator or device (iPhone-only — no iPad support).
-2. Confirm the scheme's StoreKit Configuration is set: **Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration → `Storekit.storekit`**. This must be set through Xcode's UI, not by hand-editing the `.xcscheme` file — see [APPLE_REVIEW.md](APPLE_REVIEW.md) for why.
+2. Confirm the scheme's StoreKit Configuration is set: **Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration → `Storekit.storekit`**. This must be set through Xcode's UI, not by hand-editing the `.xcscheme` file — Xcode's relative-path resolution for that field isn't safe to author manually.
 3. Build and run with **⌘R**, or from the command line:
    ```bash
    xcodebuild -project JabeWellnessAI.xcodeproj -scheme JabeWellnessAI -destination 'platform=iOS Simulator,name=iPhone 16' build
@@ -108,22 +106,6 @@ JabeWellnessAI/
 
 ---
 
-## Documentation Index
-
-| Doc | Contents |
-|---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | App architecture, models, view model, services, storage, data flow |
-| [DECISIONS.md](DECISIONS.md) | Key product/architecture decisions and rationale |
-| [CHANGELOG.md](CHANGELOG.md) | Dated development history, grouped by topic |
-| [APPLE_REVIEW.md](APPLE_REVIEW.md) | App Store submission readiness checklist |
-| [ROADMAP.md](ROADMAP.md) | Current and future work, grouped by theme |
-| [SECURITY.md](SECURITY.md) | Secrets handling, credential rotation, repo visibility |
-| [MARKETING.md](MARKETING.md) | Video ad script, social captions, screenshot/publish plan |
-| [WHITEPAPER.md](WHITEPAPER.md) | White paper reference and corrections log |
-| [../CLAUDE.md](../CLAUDE.md) | Instructions for Claude Code when working in this repo |
-
----
-
 ## Technology Stack
 
 - **UI:** SwiftUI (iOS 17.0+)
@@ -132,7 +114,7 @@ JabeWellnessAI/
 - **In-App Purchase:** StoreKit 2, tested via a committed `Storekit.storekit` configuration
 - **Speech:** `SFSpeechRecognizer` + `AVAudioEngine` for voice input
 - **Persistence:** `UserDefaults` only — no cloud sync, no backend, no third-party data sharing
-- **Testing:** XCTest (`JabeWellnessAITests`, `JabeWellnessAIUITests`)
+- **Testing:** Swift Testing (`JabeWellnessAITests`), XCTest (`JabeWellnessAIUITests`)
 
 ---
 
@@ -144,7 +126,7 @@ Single-file SwiftUI app (`ContentView.swift`, ~2700 lines) organized MVVM-style:
 - **ViewModel** — `JournalViewModel` (chat send/receive, mood detection, session lifecycle)
 - **Services** — `AIService` (Groq calls), `StorageManager` (UserDefaults), `StreakManager`, `PremiumManager` (StoreKit 2), `VoiceInputManager`, `SentimentAnalyzer` / `EmotionDetector` / `SafetyChecker`
 
-Full breakdown, data flow, and the free/premium split live in [ARCHITECTURE.md](ARCHITECTURE.md).
+The free tier covers the AI chat with mood detection and the safety checker; premium adds mood trend tracking, streaks, weekly AI insights, guided exercises, voice input, and journal export.
 
 ---
 
