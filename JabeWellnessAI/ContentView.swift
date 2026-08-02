@@ -288,7 +288,21 @@ struct ChatSession: Identifiable, Codable {
         self.id           = UUID()
         self.date         = date
         self.messages     = messages
-        self.dominantMood = messages.compactMap { $0.mood }.first ?? .neutral
+        self.dominantMood = Self.computeDominantMood(messages)
+    }
+
+    // The mood that occurs most often among the session's tagged messages — not just
+    // whichever mood the first tagged message happened to have. Ties go to whichever
+    // mood occurred first, so behavior stays stable for short conversations.
+    private static func computeDominantMood(_ messages: [ChatMessage]) -> MoodType {
+        let moods = messages.compactMap { $0.mood }
+        guard !moods.isEmpty else { return .neutral }
+
+        var counts: [MoodType: Int] = [:]
+        for mood in moods { counts[mood, default: 0] += 1 }
+
+        let maxCount = counts.values.max() ?? 0
+        return moods.first { counts[$0] == maxCount } ?? .neutral
     }
 }
 
