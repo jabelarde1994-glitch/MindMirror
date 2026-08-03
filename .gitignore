@@ -42,3 +42,8 @@ docs/WHITEPAPER.md
 
 # Agent instructions — kept locally only, not pushed to GitHub
 CLAUDE.md
+.claude/
+.superpowers/
+
+# Internal design specs / planning docs — local-only
+docs/superpowers/
