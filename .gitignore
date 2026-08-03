@@ -47,3 +47,8 @@ CLAUDE.md
 
 # Internal design specs / planning docs — local-only
 docs/superpowers/
+
+# Google Drive staging dirs. The Drive client recreates these on its own
+# inside synced folders; they are its scratch space, never project content.
+.tmp.driveupload
+.tmp.drivedownload
