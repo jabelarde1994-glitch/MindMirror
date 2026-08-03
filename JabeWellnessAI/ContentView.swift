@@ -13,6 +13,7 @@ import Charts
 import Speech
 import AVFoundation
 import StoreKit
+import Security
 
 //*======================================================================*//
 // MARK: - Secrets
@@ -419,6 +420,54 @@ final class StreakManager: ObservableObject {
 }
 
 //*======================================================================*//
+// MARK: - Trial Anchor Store
+//*======================================================================*//
+
+// The date the free trial started, kept in the Keychain rather than UserDefaults.
+// Keychain items survive deleting the app; UserDefaults does not, so a UserDefaults
+// anchor handed out a fresh 7-day trial on every reinstall.
+enum TrialAnchorStore {
+
+    private static let service = "com.jabe.wellnessai"
+    private static let account = "trialAnchor"
+
+    private static var baseQuery: [String: Any] {
+        [
+            kSecClass       as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+    }
+
+    static func load() -> Date? {
+        var query = baseQuery
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data   = item as? Data,
+              let string = String(data: data, encoding: .utf8)
+        else { return nil }
+
+        return ISO8601DateFormatter().date(from: string)
+    }
+
+    static func save(_ date: Date) {
+        guard let data = ISO8601DateFormatter().string(from: date).data(using: .utf8) else { return }
+
+        SecItemDelete(baseQuery as CFDictionary)
+
+        var attributes = baseQuery
+        attributes[kSecValueData     as String] = data
+        // Needs to be readable on a background launch, but never syncs to iCloud
+        // or migrates to a new device — the trial is per-install, not per-account.
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        SecItemAdd(attributes as CFDictionary, nil)
+    }
+}
+
+//*======================================================================*//
 // MARK: - Premium Manager (StoreKit 2)
 //*======================================================================*//
 
@@ -436,38 +485,94 @@ final class PremiumManager: ObservableObject {
     private let productID = "com.jabe.premium"
     private let trialDays = 7
 
+    // Offline cache of the last entitlement check, never the grant itself.
+    // Transaction.currentEntitlements is the source of truth: refreshEntitlements()
+    // overwrites this on launch, on foreground, and after any purchase or restore,
+    // so hand-editing the key in the app container buys at most one session.
     private var isPurchased: Bool {
         get { UserDefaults.standard.bool(forKey: "mm_isPurchased") }
         set { UserDefaults.standard.set(newValue, forKey: "mm_isPurchased"); refreshStatus() }
     }
 
-    init() {
-        if UserDefaults.standard.string(forKey: "mm_firstLaunch") == nil {
-            UserDefaults.standard.set(
-                ISO8601DateFormatter().string(from: Date()), forKey: "mm_firstLaunch"
-            )
+    private var trialStartDate: Date? {
+        if let anchored = TrialAnchorStore.load() { return anchored }
+
+        // Adopt the old UserDefaults anchor if one is there, so an install that
+        // started its trial before this moved to the Keychain keeps the days it used.
+        if let legacy = UserDefaults.standard.string(forKey: "mm_firstLaunch"),
+           let date   = ISO8601DateFormatter().date(from: legacy) {
+            TrialAnchorStore.save(date)
+            return date
         }
+
+        return nil
+    }
+
+    init() {
+        if trialStartDate == nil {
+            let now = Date()
+            TrialAnchorStore.save(now)
+            UserDefaults.standard.set(ISO8601DateFormatter().string(from: now), forKey: "mm_firstLaunch")
+        }
+
         refreshStatus()
         Task { await loadProduct() }
-        Task { await restoreIfNeeded() }
+        Task { await refreshEntitlements() }
+
+        // A purchase made on another device, or a refund, arrives here rather than
+        // through the paywall — pick it up and re-derive status either way.
+        Task { [weak self] in
+            for await result in Transaction.updates {
+                if case .verified(let transaction) = result { await transaction.finish() }
+                await self?.refreshEntitlements()
+            }
+        }
+
+        Task { [weak self] in
+            let foreground = await NotificationCenter.default.notifications(
+                named: UIApplication.willEnterForegroundNotification
+            )
+            for await _ in foreground { await self?.refreshEntitlements() }
+        }
     }
 
     private func refreshStatus() { isPremium = isPurchased || isInTrial }
 
+    // Authoritative entitlement check. Sets isPurchased false as readily as true, so a
+    // refunded or revoked purchase actually downgrades instead of staying unlocked forever.
+    func refreshEntitlements() async {
+        var entitled = false
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result,
+               transaction.productID == productID,
+               transaction.revocationDate == nil {
+                entitled = true
+            }
+        }
+        isPurchased = entitled
+    }
+
     var isInTrial: Bool {
         guard !isPurchased else { return false }
-        guard let str  = UserDefaults.standard.string(forKey: "mm_firstLaunch"),
-              let date = ISO8601DateFormatter().date(from: str) else { return true }
-        let days = Calendar.current.dateComponents([.day], from: date, to: Date()).day ?? 0
-        return days < trialDays
+        guard let start = trialStartDate else { return true }
+        return Self.isInTrial(start: start, now: Date(), trialDays: trialDays)
     }
 
     var trialDaysRemaining: Int {
         guard !isPurchased else { return 0 }
-        guard let str  = UserDefaults.standard.string(forKey: "mm_firstLaunch"),
-              let date = ISO8601DateFormatter().date(from: str) else { return trialDays }
-        let days = Calendar.current.dateComponents([.day], from: date, to: Date()).day ?? 0
-        return max(0, trialDays - days)
+        guard let start = trialStartDate else { return trialDays }
+        return Self.trialDaysRemaining(start: start, now: Date(), trialDays: trialDays)
+    }
+
+    // Pure, so the trial window can be tested without StoreKit, the Keychain, or the device
+    // clock. nonisolated because the rest of the class is @MainActor and this needs neither.
+    nonisolated static func trialDaysRemaining(start: Date, now: Date, trialDays: Int) -> Int {
+        let elapsed = Calendar.current.dateComponents([.day], from: start, to: now).day ?? 0
+        return max(0, trialDays - max(0, elapsed))
+    }
+
+    nonisolated static func isInTrial(start: Date, now: Date, trialDays: Int) -> Bool {
+        trialDaysRemaining(start: start, now: now, trialDays: trialDays) > 0
     }
 
     func purchase() async {
@@ -510,7 +615,7 @@ final class PremiumManager: ObservableObject {
         } catch {
             purchaseError = error.localizedDescription
         }
-        await restoreIfNeeded()
+        await refreshEntitlements()
     }
 
     private func loadProduct() async {
@@ -522,12 +627,6 @@ final class PremiumManager: ObservableObject {
             }
         } catch {
             purchaseError = "Couldn't load the product from the store: \(error.localizedDescription)"
-        }
-    }
-
-    private func restoreIfNeeded() async {
-        for await result in Transaction.currentEntitlements {
-            if case .verified(let tx) = result, tx.productID == productID { isPurchased = true }
         }
     }
 }
@@ -579,6 +678,11 @@ final class VoiceInputManager: ObservableObject {
         request = SFSpeechAudioBufferRecognitionRequest()
         guard let request, let recognizer, recognizer.isAvailable else { return }
         request.shouldReportPartialResults = true
+
+        // Keep voice audio on the device. Left unset this defaults to false, which lets
+        // iOS transcribe via Apple's servers — the privacy policy says transcription is
+        // on-device, so ask for it explicitly wherever the device can do it.
+        request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
 
         let node = audioEngine.inputNode
         node.installTap(onBus: 0, bufferSize: 1024, format: node.outputFormat(forBus: 0)) { [weak self] buf, _ in
@@ -736,14 +840,17 @@ final class AIService {
               let url = URL(string: "https://api.groq.com/openai/v1/chat/completions")
         else { return "" }
 
+        // Moods and dates only — never reflection text. The privacy policy promises
+        // journal entries stay on the device, and sending excerpts to Groq to build
+        // this insight would break that promise for the most sensitive data the app holds.
         let chatSummary    = sessions.map { "\($0.dominantMood.rawValue) on \($0.date.formatted(date: .abbreviated, time: .omitted))" }.joined(separator: "; ")
-        let journalSummary = journal.map  { "Felt \($0.mood.rawValue): \($0.reflection.prefix(80))" }.joined(separator: "; ")
+        let journalSummary = journal.map  { "Felt \($0.mood.rawValue) on \($0.date.formatted(date: .abbreviated, time: .omitted))" }.joined(separator: "; ")
 
         let prompt = """
         Based on this user's recent emotional data, provide a warm, concise 2–3 sentence weekly insight. Be supportive, highlight any patterns, and end with one encouraging sentence. Write directly to the user. No headers, no bullets.
 
         Chat moods: \(chatSummary.isEmpty ? "none recorded" : chatSummary)
-        Journal: \(journalSummary.isEmpty ? "none recorded" : journalSummary)
+        Journal moods: \(journalSummary.isEmpty ? "none recorded" : journalSummary)
         """
 
         let body: [String: Any] = [
