@@ -13,19 +13,19 @@ Formerly named **MindMirror** — renamed to **Jabe Wellness AI** on 2026-06-24.
 
 ---
 
-## Project Overview
+## 1. Project Overview
 
 | | |
 |---|---|
 | Platform | iOS 17.0+, built with Xcode 26.0.1 |
+| Status | Core functionality complete. App Store submission pending Apple Developer account. |
 | Bundle ID | `com.jabe.wellnessai` |
 | StoreKit product | `com.jabe.premium` — $3.99 one-time, 7-day free trial |
 | AI backend | Groq API, `llama-3.3-70b-versatile` |
-| Status | Core functionality complete. App Store submission pending Apple Developer account. |
 
 ---
 
-## Features
+## 2. Features
 
 ### Free
 - AI chatbot with full open-ended conversation
@@ -45,13 +45,28 @@ Formerly named **MindMirror** — renamed to **Jabe Wellness AI** on 2026-06-24.
 
 ---
 
-## Screenshots
+## 3. Technology Stack
 
-App Store screenshots have been completed for all supported device sizes, managed outside this repository.
+- **UI:** SwiftUI (iOS 17.0+)
+- **Concurrency:** Swift `async`/`await`
+- **AI:** Groq API (`llama-3.3-70b-versatile`), free tier — 30 RPM / 14,400 RPD
+- **Persistence:** `UserDefaults` only — no cloud sync, no backend, no third-party data sharing
+- **Speech:** `SFSpeechRecognizer` + `AVAudioEngine` for voice input
+- **In-App Purchase:** StoreKit 2, tested via a committed `Storekit.storekit` configuration
+- **Testing:** Swift Testing (`JabeWellnessAITests`), XCTest (`JabeWellnessAIUITests`)
 
 ---
 
-## Installation
+## 4. Getting Started
+
+### Requirements
+
+- macOS with Xcode 26.0.1+ installed
+- An iOS 17.0+ simulator or physical iPhone
+- A free [Groq](https://console.groq.com/keys) account for an API key
+- No CocoaPods / Swift Package dependencies — the app has none
+
+### Installation
 
 1. Clone the repository:
    ```bash
@@ -67,10 +82,8 @@ App Store screenshots have been completed for all supported device sizes, manage
    }
    ```
    Get a free key at [console.groq.com/keys](https://console.groq.com/keys).
-   
----
 
-## Build Instructions
+### Build & Run
 
 1. Select the **JabeWellnessAI** scheme and an iPhone simulator or device (iPhone-only — no iPad support).
 2. Confirm the scheme's StoreKit Configuration is set: **Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration → `Storekit.storekit`**. This must be set through Xcode's UI, not by hand-editing the `.xcscheme` file — Xcode's relative-path resolution for that field isn't safe to author manually.
@@ -78,13 +91,20 @@ App Store screenshots have been completed for all supported device sizes, manage
    ```bash
    xcodebuild -project JabeWellnessAI.xcodeproj -scheme JabeWellnessAI -destination 'platform=iOS Simulator,name=iPhone 16' build
    ```
-4. Run tests with **⌘U**, or:
-   ```bash
-   xcodebuild test -project JabeWellnessAI.xcodeproj -scheme JabeWellnessAI -destination 'platform=iOS Simulator,name=iPhone 16'
-   ```
+
+### Testing
+
+Run tests with **⌘U**, or:
+
+```bash
+xcodebuild test -project JabeWellnessAI.xcodeproj -scheme JabeWellnessAI -destination 'platform=iOS Simulator,name=iPhone 16'
+```
+
 ---
 
-## Project Structure
+## 5. Project Structure
+
+Repository layout:
 
 ```
 JabeWellnessAI/
@@ -102,23 +122,7 @@ JabeWellnessAI/
 └── docs/                                # README (this file) + App Store privacy policy page
 ```
 
----
-
-## Technology Stack
-
-- **UI:** SwiftUI (iOS 17.0+)
-- **Concurrency:** Swift `async`/`await`
-- **AI:** Groq API (`llama-3.3-70b-versatile`), free tier — 30 RPM / 14,400 RPD
-- **In-App Purchase:** StoreKit 2, tested via a committed `Storekit.storekit` configuration
-- **Speech:** `SFSpeechRecognizer` + `AVAudioEngine` for voice input
-- **Persistence:** `UserDefaults` only — no cloud sync, no backend, no third-party data sharing
-- **Testing:** Swift Testing (`JabeWellnessAITests`), XCTest (`JabeWellnessAIUITests`)
-
----
-
-## Architecture Summary
-
-Single-file SwiftUI app (`ContentView.swift`, ~2700 lines) organized MVVM-style:
+Architecture summary — single-file SwiftUI app (`ContentView.swift`, ~2700 lines) organized MVVM-style:
 
 - **Models** — `ChatMessage`, `ChatSession`, `JournalEntry` (all `Codable`)
 - **ViewModel** — `JournalViewModel` (chat send/receive, mood detection, session lifecycle)
@@ -128,9 +132,34 @@ The free tier covers the AI chat with mood detection and the safety checker; pre
 
 ---
 
-## Requirements
+## 6. Documentation
 
-- macOS with Xcode 26.0.1+ installed
-- An iOS 17.0+ simulator or physical iPhone
-- A free [Groq](https://console.groq.com/keys) account for an API key
-- No CocoaPods / Swift Package dependencies — the app has none
+README.md — this file: overview, setup, and build instructions.
+
+The remaining documents are internal project records kept locally and are not published to this repository:
+
+ARCHITECTURE.md — components, data flow, storage strategy, and implementation notes.
+
+DECISIONS.md — product, architecture, platform, and infrastructure decisions with their reasoning.
+
+CHANGELOG.md — reverse-chronological history of notable project changes.
+
+ROADMAP.md — planned work, blockers, and completed milestones.
+
+APPLE_REVIEW.md — App Store submission readiness, requirements, and pre-submission checklist.
+
+MARKETING.md — marketing assets, messaging decisions, and launch strategy.
+
+SECURITY.md — credential handling, data-transmission boundaries, and security review notes.
+
+---
+
+## 7. Current Status
+
+Current milestone
+
+Core functionality complete — AI chat and premium purchase/restore verified working end-to-end. App Store screenshots have been completed for all supported device sizes, managed outside this repository.
+
+Upcoming milestone
+
+App Store submission, pending an Apple Developer Program account.
