@@ -57,7 +57,14 @@ enum SecretsStore {
 
 Get a free key at [console.groq.com/keys](https://console.groq.com/keys), then open `JabeWellnessAI.xcodeproj` and run with ⌘R.
 
-Full setup, build, and test instructions: **[docs/README.md](docs/README.md)**
+To exercise in-app purchases, set the scheme's StoreKit configuration in Xcode — **Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration → `Storekit.storekit`**. Set it through the UI; the relative path in `.xcscheme` isn't safe to hand-edit.
+
+Run tests with ⌘U, or:
+
+```bash
+xcodebuild test -project JabeWellnessAI.xcodeproj -scheme JabeWellnessAI \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
+```
 
 ## License
 

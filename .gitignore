@@ -30,7 +30,9 @@ SecretsStore.swift
 # fresh clone.
 
 # Internal planning/engineering docs — kept locally for reference, not
-# pushed to GitHub. docs/README.md and docs/privacy.html stay tracked.
+# pushed to GitHub. The public-facing docs are README.md at the repo root
+# and docs/privacy.html; both stay tracked.
+docs/README.md
 docs/ARCHITECTURE.md
 docs/DECISIONS.md
 docs/CHANGELOG.md
