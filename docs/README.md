@@ -111,7 +111,7 @@ JabeWellnessAI/
 ├── JabeWellnessAI.xcodeproj/
 │   └── xcshareddata/xcschemes/JabeWellnessAI.xcscheme
 ├── JabeWellnessAI/                      # App target
-│   ├── ContentView.swift                # Entire app: models, view model, services, views (~2700 lines)
+│   ├── ContentView.swift                # Entire app: models, view model, services, views (~2800 lines)
 │   ├── SecretsStore.swift               # Gitignored — Groq API key (create locally, see Installation)
 │   ├── Storekit.storekit                # StoreKit Testing config (committed, no secrets)
 │   ├── Info.plist
@@ -122,7 +122,7 @@ JabeWellnessAI/
 └── docs/                                # README (this file) + App Store privacy policy page
 ```
 
-Architecture summary — single-file SwiftUI app (`ContentView.swift`, ~2700 lines) organized MVVM-style:
+Architecture summary — single-file SwiftUI app (`ContentView.swift`, ~2800 lines) organized MVVM-style:
 
 - **Models** — `ChatMessage`, `ChatSession`, `JournalEntry` (all `Codable`)
 - **ViewModel** — `JournalViewModel` (chat send/receive, mood detection, session lifecycle)
