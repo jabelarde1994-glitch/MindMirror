@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="JabeWellnessAI/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="110" alt="Jabe Wellness AI app icon" />
+  <img src="../JabeWellnessAI/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="110" alt="Jabe Wellness AI app icon" />
 </p>
 
 <h1 align="center">Jabe Wellness AI</h1>
@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/chat.png" width="200" alt="Chat" />
-  <img src="docs/screenshots/insights.png" width="200" alt="Insights" />
-  <img src="docs/screenshots/exercises.png" width="200" alt="Guided exercises" />
-  <img src="docs/screenshots/journal.png" width="200" alt="Journal" />
+  <img src="screenshots/chat.png" width="200" alt="Chat" />
+  <img src="screenshots/insights.png" width="200" alt="Insights" />
+  <img src="screenshots/exercises.png" width="200" alt="Guided exercises" />
+  <img src="screenshots/journal.png" width="200" alt="Journal" />
 </p>
 
 ---
@@ -29,7 +29,7 @@
 
 Conversations and journal entries are stored **only on your device** using `UserDefaults`. There is no cloud sync, no account, and no analytics. Journal text never leaves the device. Chat messages are sent to the AI provider solely to generate a reply.
 
-Full policy: [docs/privacy.html](docs/privacy.html)
+Full policy: [privacy.html](privacy.html)
 
 > Jabe is a wellness companion, not a licensed therapist, and does not provide medical advice.
 

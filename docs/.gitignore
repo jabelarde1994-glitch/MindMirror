@@ -1,0 +1,79 @@
+# ⚠️ THIS FILE LIVES IN docs/ — IT ONLY GOVERNS docs/
+#
+# A .gitignore applies to its own directory and everything below it. Because
+# this one sits in docs/, none of the repo-wide rules below take effect from
+# here — they are kept for reference and for restoring a root .gitignore.
+#
+# On the maintainer's machine those repo-wide rules are mirrored in
+# .git/info/exclude, which is local-only and never committed. That file is
+# what currently protects SecretsStore.swift, CLAUDE.md, .claude/, and the
+# internal docs.
+#
+# ON A FRESH CLONE THERE IS NO PROTECTION. .git/info/exclude does not travel
+# with a clone. Before doing any work in a new copy of this repo, move this
+# file back to the repository root, or SecretsStore.swift (Groq API key) can
+# be staged and committed.
+
+# ---------------------------------------------------------------------------
+# Active rules — these DO work, because they are relative to docs/
+# ---------------------------------------------------------------------------
+
+# Internal planning/engineering docs — kept locally, not pushed to GitHub.
+# The public-facing files in docs/ are README.md, LICENSE, privacy.html, and
+# screenshots/.
+ARCHITECTURE.md
+DECISIONS.md
+CHANGELOG.md
+APPLE_REVIEW.md
+ROADMAP.md
+SECURITY.md
+MARKETING.md
+WHITEPAPER.md
+
+# Internal design specs / planning docs — local-only
+superpowers/
+
+# ---------------------------------------------------------------------------
+# Repo-wide rules — INACTIVE from this location. Live copy: .git/info/exclude
+# ---------------------------------------------------------------------------
+
+# Xcode build output
+build/
+DerivedData/
+*.xcarchive
+
+# User-specific Xcode settings
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# CocoaPods
+Pods/
+
+# Swift Package Manager
+.build/
+*.resolved
+
+# macOS
+.DS_Store
+
+# API keys / secrets — never commit these
+*.plist.bak
+Secrets.swift
+APIKeys.swift
+SecretsStore.swift
+
+# Note: *.storekit is intentionally NOT ignored — it holds no secrets
+# (just product IDs/prices) and the shared Xcode scheme references it
+# directly, so it must be committed for StoreKit Testing to work on a
+# fresh clone.
+
+# Agent instructions — kept locally only, not pushed to GitHub
+CLAUDE.md
+.claude/
+.superpowers/
+
+# Google Drive staging dirs. The Drive client recreates these on its own
+# inside synced folders; they are its scratch space, never project content.
+.tmp.driveupload
+.tmp.drivedownload
