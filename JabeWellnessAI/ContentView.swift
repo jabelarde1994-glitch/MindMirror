@@ -2265,6 +2265,7 @@ struct CBTExerciseView: View {
     @State private var evidence  = ""
     @State private var reframe   = ""
     @State private var step      = 0
+    @FocusState private var isFieldFocused: Bool
 
     var body: some View {
         NavigationView {
@@ -2281,12 +2282,14 @@ struct CBTExerciseView: View {
                 Section("Step 1 — The Thought") {
                     TextField("What's the negative thought bothering you?", text: $thought, axis: .vertical)
                         .lineLimit(3...5)
+                        .focused($isFieldFocused)
                 }
 
                 if step >= 1 {
                     Section("Step 2 — Challenge It") {
                         TextField("What evidence contradicts this thought? What would you tell a friend?", text: $evidence, axis: .vertical)
                             .lineLimit(3...5)
+                            .focused($isFieldFocused)
                     }
                 }
 
@@ -2294,6 +2297,7 @@ struct CBTExerciseView: View {
                     Section("Step 3 — Reframe") {
                         TextField("Write a more balanced, compassionate version of the thought…", text: $reframe, axis: .vertical)
                             .lineLimit(3...5)
+                            .focused($isFieldFocused)
                     }
                 }
 
@@ -2322,6 +2326,10 @@ struct CBTExerciseView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) { Button("Close") { dismiss() } }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isFieldFocused = false }
+                }
             }
         }
     }
