@@ -48,8 +48,44 @@ final class JabeWellnessAIUITests: XCTestCase {
         // SF Symbol "arrow.up" / "plus.bubble" get default accessibility labels "Up" / "Comment"
         app.buttons["Up"].tap()
 
-        let jabeLabel = app.staticTexts["Jabe"].firstMatch
-        XCTAssertTrue(jabeLabel.waitForExistence(timeout: 20), "AI reply bubble should appear")
+        // This used to wait on staticTexts["Jabe"], which is ALSO the navigation header —
+        // already on screen before anything is sent, and identical whether the reply is a
+        // real answer or an API error. The test passed while chat was returning HTTP 401.
+        // Assert on the content of the reply instead, and name the failure texts explicitly,
+        // because this test is the documented way to confirm the Groq key works without
+        // anyone reading it.
+        let failureTexts = [
+            "issue with the API key",
+            "Something went wrong",
+            "need a moment to breathe"
+        ]
+
+        let notAFailure = failureTexts
+            .map { "NOT (label CONTAINS[c] '\($0)')" }
+            .joined(separator: " AND ")
+
+        // XCUITest predicates do NOT support label.length — it throws
+        // XCTElementQueryInvalidPredicate at evaluation time. MATCHES with an ICU regex is
+        // the supported way to express "a substantial reply"; (?s) so newlines count too.
+        let reply = app.staticTexts.matching(
+            NSPredicate(format: "label MATCHES %@ AND NOT (label CONTAINS[c] %@) AND \(notAFailure)",
+                        "(?s).{60,}", "job interview tomorrow")
+        ).firstMatch
+
+        XCTAssertTrue(
+            reply.waitForExistence(timeout: 25),
+            "A genuine AI reply should arrive. If this fails with the error bubble on screen, "
+            + "the Groq API key is being rejected — check GROQ STATUS in the console.\n\(app.debugDescription)"
+        )
+
+        for failureText in failureTexts {
+            XCTAssertFalse(
+                app.staticTexts.matching(
+                    NSPredicate(format: "label CONTAINS[c] %@", failureText)
+                ).firstMatch.exists,
+                "Chat returned an error instead of a reply: \(failureText)"
+            )
+        }
 
         app.buttons["Comment"].tap()
 

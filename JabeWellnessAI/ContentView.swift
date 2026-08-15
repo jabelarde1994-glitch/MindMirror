@@ -827,7 +827,7 @@ final class AIService {
         }
 
         let body: [String: Any] = [
-            "model":       "llama-3.3-70b-versatile",
+            "model":       "openai/gpt-oss-120b",
             "messages":    messages,
             "temperature": 0.8,
             "max_tokens":  220
@@ -884,7 +884,7 @@ final class AIService {
         """
 
         let body: [String: Any] = [
-            "model":       "llama-3.3-70b-versatile",
+            "model":       "openai/gpt-oss-120b",
             "messages":    [["role": "user", "content": prompt]],
             "temperature": 0.7,
             "max_tokens":  130
@@ -1807,7 +1807,7 @@ struct SettingsView: View {
                     LabeledContent("App",       value: "Jabe Wellness AI")
                     LabeledContent("Version",   value: "1.0.0")
                     LabeledContent("Developer", value: "Jabe")
-                    LabeledContent("AI Model",  value: "Llama 3.3 via Groq")
+                    LabeledContent("AI Model",  value: "GPT OSS 120B via Groq")
                     LabeledContent("Storage",   value: "Local device")
                 }
             }
