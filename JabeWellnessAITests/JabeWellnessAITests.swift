@@ -68,6 +68,39 @@ struct JabeWellnessAITests {
         #expect(PremiumManager.trialDaysRemaining(start: future, now: Date(), trialDays: 7) == 7)
     }
 
+    // MARK: - Entitlement state
+    //
+    // Reported 2026-08-15 on a physical iPhone 11 Pro Max: tapping "Unlock for $3.99" while
+    // the free trial was still running completed the purchase, but the paywall neither
+    // confirmed it nor closed, so it was tapped three more times. Root cause is that the
+    // paywall observes isPremium (= isPurchased || isInTrial), which is ALREADY true for the
+    // whole trial and stays true after buying. The value never changes, SwiftUI's .onChange
+    // never fires, and nothing on screen moves. The entitlement SOURCE has to be observable,
+    // not just the boolean "is this user entitled".
+
+    @Test func buyingDuringTheTrialChangesTheObservedState() async throws {
+        let duringTrial = PremiumManager.entitlementState(isPurchased: false, isInTrial: true,  trialDaysRemaining: 5)
+        // isInTrial is suppressed the moment isPurchased flips — see PremiumManager.isInTrial.
+        let afterBuying = PremiumManager.entitlementState(isPurchased: true,  isInTrial: false, trialDaysRemaining: 0)
+
+        #expect(duringTrial != afterBuying)
+        #expect(afterBuying == .purchased)
+    }
+
+    // Defensive: even if both facts are somehow true at once, money beats a countdown.
+    @Test func aCompletedPurchaseOutranksAnActiveTrial() async throws {
+        #expect(PremiumManager.entitlementState(isPurchased: true, isInTrial: true, trialDaysRemaining: 5) == .purchased)
+    }
+
+    @Test func anActiveTrialCarriesItsRemainingDays() async throws {
+        #expect(PremiumManager.entitlementState(isPurchased: false, isInTrial: true, trialDaysRemaining: 3)
+                == .trial(daysRemaining: 3))
+    }
+
+    @Test func noPurchaseAndNoTrialIsLocked() async throws {
+        #expect(PremiumManager.entitlementState(isPurchased: false, isInTrial: false, trialDaysRemaining: 0) == .locked)
+    }
+
     // The trial anchor has to survive deleting the app, so it lives in the Keychain
     // rather than UserDefaults — a UserDefaults anchor granted a new trial per reinstall.
     @Test func trialAnchorRoundTripsThroughTheKeychain() async throws {

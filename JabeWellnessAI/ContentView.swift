@@ -471,12 +471,26 @@ enum TrialAnchorStore {
 // MARK: - Premium Manager (StoreKit 2)
 //*======================================================================*//
 
+// Where an entitlement came from, not merely whether one exists. isPremium is lossy —
+// true for a trial and true for a purchase alike — so a purchase made DURING a trial
+// moves nothing observable and the paywall has nothing to react to.
+enum EntitlementState: Equatable {
+    case locked
+    case trial(daysRemaining: Int)
+    case purchased
+}
+
 @MainActor
 final class PremiumManager: ObservableObject {
 
     static let shared = PremiumManager()
 
+    // Whether the user is entitled AT ALL. Correct as a gate, but useless as a change
+    // trigger: it is already true during the trial and stays true after a purchase, so
+    // .onChange never fires on it. Views that need to react to a purchase must watch
+    // entitlementState instead.
     @Published private(set) var isPremium: Bool    = false
+    @Published private(set) var entitlementState: EntitlementState = .locked
     @Published private(set) var product:   Product?
     @Published var showPaywall: Bool = false
     @Published var purchaseError: String?
@@ -536,7 +550,12 @@ final class PremiumManager: ObservableObject {
         }
     }
 
-    private func refreshStatus() { isPremium = isPurchased || isInTrial }
+    private func refreshStatus() {
+        isPremium = isPurchased || isInTrial
+        entitlementState = Self.entitlementState(isPurchased: isPurchased,
+                                                 isInTrial: isInTrial,
+                                                 trialDaysRemaining: trialDaysRemaining)
+    }
 
     // Authoritative entitlement check. Sets isPurchased false as readily as true, so a
     // refunded or revoked purchase actually downgrades instead of staying unlocked forever.
@@ -573,6 +592,14 @@ final class PremiumManager: ObservableObject {
 
     nonisolated static func isInTrial(start: Date, now: Date, trialDays: Int) -> Bool {
         trialDaysRemaining(start: start, now: now, trialDays: trialDays) > 0
+    }
+
+    nonisolated static func entitlementState(isPurchased: Bool,
+                                             isInTrial: Bool,
+                                             trialDaysRemaining: Int) -> EntitlementState {
+        if isPurchased { return .purchased }
+        if isInTrial   { return .trial(daysRemaining: trialDaysRemaining) }
+        return .locked
     }
 
     func purchase() async {
@@ -1718,22 +1745,23 @@ struct SettingsView: View {
 
                 // Premium
                 Section("Premium") {
-                    if premium.isPremium && !premium.isInTrial {
+                    switch premium.entitlementState {
+                    case .purchased:
                         HStack {
                             Label("Premium Unlocked", systemImage: "checkmark.seal.fill")
                                 .foregroundColor(.green)
                             Spacer()
                         }
-                    } else if premium.isInTrial {
+                    case .trial(let daysRemaining):
                         Button { premium.showPaywall = true } label: {
                             HStack {
                                 Label("Free Trial Active", systemImage: "star.fill").foregroundColor(.orange)
                                 Spacer()
-                                Text("\(premium.trialDaysRemaining) days left")
+                                Text("\(daysRemaining) days left")
                                     .font(.caption).foregroundColor(.orange)
                             }
                         }
-                    } else {
+                    case .locked:
                         Button { premium.showPaywall = true } label: {
                             HStack {
                                 Label("Unlock Premium", systemImage: "star.fill").foregroundColor(Color(red: 0.52, green: 0.22, blue: 0.88))
@@ -2385,33 +2413,52 @@ struct PremiumPaywallView: View {
 
                     // Purchase
                     VStack(spacing: 12) {
-                        Button {
-                            Task { isPurchasing = true; await premium.purchase(); isPurchasing = false }
-                        } label: {
-                            Group {
-                                if isPurchasing {
-                                    ProgressView().tint(.white)
-                                } else {
-                                    Text("Unlock for \(premium.product?.displayPrice ?? "$3.99")")
-                                    .fontWeight(.semibold)
-                                }
+                        if premium.entitlementState == .purchased {
+                            // There is nothing left to sell, so say so. Without this the
+                            // "$3.99" button stayed on screen after a completed purchase and
+                            // people tapped it again — StoreKit no-ops silently on an
+                            // already-owned non-consumable, so nothing happened.
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark.seal.fill")
+                                Text("Premium Unlocked").fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(red: 0.62, green: 0.22, blue: 0.98),
-                                             Color(red: 0.38, green: 0.12, blue: 0.78)],
-                                    startPoint: .leading, endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
+                            .background(Color.green.opacity(0.15))
+                            .foregroundColor(.green)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
-                        .disabled(isPurchasing)
 
-                        Text("One-time purchase · No subscription · No recurring charges")
-                            .font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center)
+                            Text("Thank you — every feature above is yours for good.")
+                                .font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center)
+                        } else {
+                            Button {
+                                Task { isPurchasing = true; await premium.purchase(); isPurchasing = false }
+                            } label: {
+                                Group {
+                                    if isPurchasing {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Text("Unlock for \(premium.product?.displayPrice ?? "$3.99")")
+                                        .fontWeight(.semibold)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.62, green: 0.22, blue: 0.98),
+                                                 Color(red: 0.38, green: 0.12, blue: 0.78)],
+                                        startPoint: .leading, endPoint: .trailing
+                                    )
+                                )
+                                .foregroundColor(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                            }
+                            .disabled(isPurchasing)
+
+                            Text("One-time purchase · No subscription · No recurring charges")
+                                .font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center)
+                        }
 
                         Button {
                             Task { isRestoring = true; await premium.restorePurchases(); isRestoring = false }
@@ -2444,9 +2491,11 @@ struct PremiumPaywallView: View {
                 ToolbarItem(placement: .navigationBarTrailing) { Button("Close") { dismiss() } }
             }
         }
-        .onChange(of: premium.isPremium) { _, isPremium in
-            if isPremium && !premium.isInTrial { dismiss() }
-        }
+        // Deliberately no auto-dismiss. The old rule watched isPremium, which is already
+        // true throughout the trial and stays true after buying, so it never fired for
+        // anyone who purchased during their first seven days — they paid and the paywall
+        // sat there unchanged. Confirming in place also keeps Restore Purchase reachable,
+        // which vanishes the instant the sheet closes.
     }
 
     @ViewBuilder
