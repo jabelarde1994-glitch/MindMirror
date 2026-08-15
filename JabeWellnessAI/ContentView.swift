@@ -543,7 +543,10 @@ final class PremiumManager: ObservableObject {
         }
 
         Task { [weak self] in
-            let foreground = await NotificationCenter.default.notifications(
+            // notifications(named:) hands back an AsyncSequence synchronously — it is not
+            // itself async, so awaiting it did nothing but raise a warning. The suspension
+            // that matters is the `for await` below.
+            let foreground = NotificationCenter.default.notifications(
                 named: UIApplication.willEnterForegroundNotification
             )
             for await _ in foreground { await self?.refreshEntitlements() }
