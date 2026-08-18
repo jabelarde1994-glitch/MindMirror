@@ -35,11 +35,11 @@ Full policy: [privacy.html](privacy.html)
 
 ## Built with
 
-SwiftUI (iOS 17+) · Swift concurrency · StoreKit 2 · `SFSpeechRecognizer` + `AVAudioEngine` · Swift Testing + XCTest
+SwiftUI (iOS 17.6+) · Swift concurrency · StoreKit 2 · `SFSpeechRecognizer` + `AVAudioEngine` · Swift Testing + XCTest
 
 ## Quick start
 
-Requires macOS with Xcode 26+ and an iOS 17+ simulator or iPhone. No package dependencies.
+Requires macOS with Xcode 26+ and an iOS 17.6+ simulator or iPhone. No package dependencies.
 
 ```bash
 git clone https://github.com/jabelarde1994-glitch/JabeWellnessAI.git
@@ -63,7 +63,7 @@ Run tests with ⌘U, or:
 
 ```bash
 xcodebuild test -project JabeWellnessAI.xcodeproj -scheme JabeWellnessAI \
-  -destination 'platform=iOS Simulator,name=iPhone 16'
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max'
 ```
 
 ## License
