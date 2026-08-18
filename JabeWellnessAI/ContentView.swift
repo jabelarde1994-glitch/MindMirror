@@ -801,6 +801,12 @@ struct GroqResponse: Decodable {
 
 final class AIService {
 
+    /// The single source of truth for which model is requested. Both request bodies and the
+    /// Settings → About row read these, so the label cannot advertise a model the app is not
+    /// actually calling — it did exactly that when llama-3.3-70b-versatile was decommissioned.
+    static let model            = "openai/gpt-oss-120b"
+    static let modelDisplayName = "GPT OSS 120B via Groq"
+
     private let apiKey = Secrets.groqAPIKey
 
     private let systemPrompt = """
@@ -847,7 +853,7 @@ final class AIService {
         }
 
         let body: [String: Any] = [
-            "model":       "openai/gpt-oss-120b",
+            "model":       Self.model,
             "messages":    messages,
             "temperature": 0.8,
             "max_tokens":  220
@@ -904,7 +910,7 @@ final class AIService {
         """
 
         let body: [String: Any] = [
-            "model":       "openai/gpt-oss-120b",
+            "model":       Self.model,
             "messages":    [["role": "user", "content": prompt]],
             "temperature": 0.7,
             "max_tokens":  130
@@ -1797,6 +1803,15 @@ struct SettingsView: View {
     @State private var reminderTime      = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
     @State private var showClearConfirm  = false
 
+    /// Read from the bundle rather than hardcoded — the old literal "1.0.0" was already wrong
+    /// against MARKETING_VERSION 1.0, and would have kept claiming 1.0.0 after every version bump.
+    /// Including the build number makes About a reliable way to identify which binary is installed.
+    private var appVersion: String {
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        return "\(short) (\(build))"
+    }
+
     var body: some View {
         NavigationView {
             List {
@@ -1860,9 +1875,9 @@ struct SettingsView: View {
 
                 Section("About") {
                     LabeledContent("App",       value: "Jabe Wellness AI")
-                    LabeledContent("Version",   value: "1.0.0")
+                    LabeledContent("Version",   value: appVersion)
                     LabeledContent("Developer", value: "Jabe")
-                    LabeledContent("AI Model",  value: "GPT OSS 120B via Groq")
+                    LabeledContent("AI Model",  value: AIService.modelDisplayName)
                     LabeledContent("Storage",   value: "Local device")
                 }
             }
