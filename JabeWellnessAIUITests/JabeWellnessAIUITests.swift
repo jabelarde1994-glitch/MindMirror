@@ -124,6 +124,49 @@ final class JabeWellnessAIUITests: XCTestCase {
     // re-derived from StoreKit entitlements. Both feed the Settings row and the paywall, so
     // this guards that a fresh install still lands in a working trial rather than locked out.
     @MainActor
+    // Until 2026-08-18 the $3.99 purchase unlocked nothing: no feature consulted
+    // entitlement. These pin both directions of the gate.
+
+    // A locked user must be able to REACH the paywall from a premium feature. Before
+    // the gate, showPaywall was set only from Settings and its sheet was attached only
+    // to Settings, so a tap anywhere else would have flipped a flag and shown nothing.
+    func testLockedUserTappingAPremiumFeatureGetsThePaywall() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-jabeForceLocked"]
+        app.launch()
+        dismissOnboardingIfPresent(app)
+
+        // The splash runs ~3.8s before MainTabView exists; tapping straight away finds no tab bar.
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30), "Tab bar should appear after the splash")
+        app.tabBars.buttons["Insights"].tap()
+
+        let lock = app.buttons["premiumLock"].firstMatch
+        XCTAssertTrue(lock.waitForExistence(timeout: 10),
+                      "Premium surfaces should be locked when the user is not entitled")
+
+        lock.tap()
+
+        XCTAssertTrue(app.staticTexts["Jabe Premium"].waitForExistence(timeout: 10),
+                      "Tapping a locked premium feature should open the paywall from a non-Settings tab")
+    }
+
+    // The mirror image, and the more damaging failure: over-gating would put a blur in
+    // front of paying and trialling users alike.
+    func testTrialUsersSeeNoLocks() throws {
+        let app = XCUIApplication()
+        app.launch()
+        dismissOnboardingIfPresent(app)
+
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30), "Tab bar should appear after the splash")
+        app.tabBars.buttons["Insights"].tap()
+        XCTAssertFalse(app.buttons["premiumLock"].firstMatch.exists,
+                       "A trial user is entitled and must not see a lock on Insights")
+
+        app.tabBars.buttons["Exercises"].tap()
+        XCTAssertFalse(app.buttons["premiumLock"].firstMatch.exists,
+                       "A trial user is entitled and must not see a lock on Exercises")
+    }
+
     func testTrialStateIsVisibleAndPaywallOpens() throws {
         let app = XCUIApplication()
         app.launch()

@@ -554,6 +554,16 @@ final class PremiumManager: ObservableObject {
     }
 
     private func refreshStatus() {
+        #if DEBUG
+        // UI-test hook. The locked branch is otherwise unreachable from a clean install:
+        // a fresh install starts a 7-day trial, so the app is entitled and nothing is
+        // gated. Compiled out of Release, so it cannot reach an archive or the store.
+        if ProcessInfo.processInfo.arguments.contains("-jabeForceLocked") {
+            isPremium = false
+            entitlementState = .locked
+            return
+        }
+        #endif
         isPremium = isPurchased || isInTrial
         entitlementState = Self.entitlementState(isPurchased: isPurchased,
                                                  isInTrial: isInTrial,
@@ -595,6 +605,16 @@ final class PremiumManager: ObservableObject {
 
     nonisolated static func isInTrial(start: Date, now: Date, trialDays: Int) -> Bool {
         trialDaysRemaining(start: start, now: now, trialDays: trialDays) > 0
+    }
+
+    // The single question every gated feature asks. Reads entitlementState rather than
+    // isPremium so there is one tested source of truth: a trial unlocks, a purchase
+    // unlocks, an expired trial does not.
+    nonisolated static func isFeatureUnlocked(_ state: EntitlementState) -> Bool {
+        switch state {
+        case .locked:               return false
+        case .trial, .purchased:    return true
+        }
     }
 
     nonisolated static func entitlementState(isPurchased: Bool,
@@ -1200,8 +1220,9 @@ struct InputBar: View {
     let isLoading:        Bool
     let onSend:           () -> Void
 
-    @StateObject private var voice = VoiceInputManager()
-    @FocusState  private var focused: Bool
+    @StateObject   private var voice   = VoiceInputManager()
+    @ObservedObject private var premium = PremiumManager.shared
+    @FocusState    private var focused: Bool
 
     private var canSend: Bool {
         !isLoading && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1245,8 +1266,14 @@ struct InputBar: View {
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 22))
 
-                // Voice mic button
+                // Voice mic button — premium. Guarded rather than blurred: a 38pt
+                // control reads as a rendering fault when blurred, and the guard also
+                // stops the microphone permission prompt firing for a locked user.
                 Button {
+                    guard PremiumManager.isFeatureUnlocked(premium.entitlementState) else {
+                        premium.showPaywall = true
+                        return
+                    }
                     if voice.isRecording {
                         let captured = voice.transcript
                         voice.stopRecording()
@@ -1262,8 +1289,17 @@ struct InputBar: View {
                         Image(systemName: voice.isRecording ? "mic.fill" : "mic")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(voice.isRecording ? .red : .secondary)
+                        if !PremiumManager.isFeatureUnlocked(premium.entitlementState) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(2)
+                                .background(Circle().fill(Color(red: 0.52, green: 0.22, blue: 0.88)))
+                                .offset(x: 13, y: 13)
+                        }
                     }
                 }
+                .accessibilityIdentifier("voiceInput")
                 .animation(.easeInOut(duration: 0.2), value: voice.isRecording)
 
                 // Send button
@@ -1500,6 +1536,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 struct JournalView: View {
 
     @ObservedObject private var storage = StorageManager.shared
+    @ObservedObject private var premium = PremiumManager.shared
     @State private var showingNewEntry  = false
     @State private var showExport       = false
     @State private var exportText       = ""
@@ -1543,7 +1580,14 @@ struct JournalView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !storage.journalEntries.isEmpty {
+                        // Writing and reading the journal stay free; only export is premium.
+                        // A 22pt toolbar icon reads as broken when blurred, so this one gets a
+                        // badge and an action guard instead of the PremiumLock overlay.
                         Button {
+                            guard PremiumManager.isFeatureUnlocked(premium.entitlementState) else {
+                                premium.showPaywall = true
+                                return
+                            }
                             exportText = storage.journalEntries.map { entry in
                                 "[\(entry.date.formatted(date: .long, time: .omitted))] \(entry.mood.emoji) \(entry.mood.rawValue)\n\(entry.reflection)"
                             }.joined(separator: "\n\n---\n\n")
@@ -1551,7 +1595,18 @@ struct JournalView: View {
                         } label: {
                             Image(systemName: "square.and.arrow.up")
                                 .foregroundColor(Color(red: 0.52, green: 0.22, blue: 0.88))
+                                .overlay(alignment: .bottomTrailing) {
+                                    if !PremiumManager.isFeatureUnlocked(premium.entitlementState) {
+                                        Image(systemName: "lock.fill")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .padding(2)
+                                            .background(Circle().fill(Color(red: 0.52, green: 0.22, blue: 0.88)))
+                                            .offset(x: 3, y: 3)
+                                    }
+                                }
                         }
+                        .accessibilityIdentifier("journalExport")
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -1821,7 +1876,6 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete all saved conversations.")
             }
-            .sheet(isPresented: $premium.showPaywall) { PremiumPaywallView() }
         }
     }
 
@@ -1855,6 +1909,7 @@ struct InsightsView: View {
 
     @ObservedObject private var storage = StorageManager.shared
     @ObservedObject private var streak  = StreakManager.shared
+    @ObservedObject private var premium = PremiumManager.shared
     @State private var weeklyInsight    = ""
     @State private var isLoadingInsight = false
     @State private var showHistory      = false
@@ -1871,14 +1926,17 @@ struct InsightsView: View {
                         longestStreak: streak.longestStreak,
                         isToday:       streak.isCheckedInToday
                     )
+                    .premiumLocked()
 
                     MoodChartView(dataPoints: combinedMoodData)
+                        .premiumLocked()
 
                     WeeklyInsightCard(
                         insight:   weeklyInsight,
                         isLoading: isLoadingInsight,
                         onGenerate: { Task { await loadInsight() } }
                     )
+                    .premiumLocked()
 
                     // Chat history accessible from Insights
                     Button { showHistory = true } label: {
@@ -1915,6 +1973,12 @@ struct InsightsView: View {
     }
 
     private func loadInsight() async {
+        // The card is blurred when locked, but guard the call too: blur is presentation,
+        // and this one costs a live API request.
+        guard PremiumManager.isFeatureUnlocked(premium.entitlementState) else {
+            premium.showPaywall = true
+            return
+        }
         guard !storage.sessions.isEmpty || !storage.journalEntries.isEmpty else {
             weeklyInsight = "Start chatting and journaling — your personalized insight will appear here after a few days."
             return
@@ -2110,6 +2174,7 @@ struct GuidedExercisesView: View {
                     }
                     .padding(.vertical, 6)
                 }
+                .premiumLocked()
             }
             .navigationTitle("Exercises")
             .sheet(item: $selectedExercise) { exercise in
@@ -2522,8 +2587,60 @@ struct PremiumPaywallView: View {
 // MARK: - Main Tab View
 //*======================================================================*//
 
+//*======================================================================*//
+// MARK: - Premium Gate
+//*======================================================================*//
+
+// Blurs a premium surface and routes taps to the paywall when the user is not
+// entitled. Trial users ARE entitled, so nothing changes for them — the blur only
+// appears once a trial expires without a purchase.
+//
+// The content gets allowsHitTesting(false) rather than disabled(true): disabled
+// propagates through the environment and would swallow the overlay's own taps.
+private struct PremiumLock: ViewModifier {
+
+    @ObservedObject private var premium = PremiumManager.shared
+
+    func body(content: Content) -> some View {
+        if PremiumManager.isFeatureUnlocked(premium.entitlementState) {
+            content
+        } else {
+            content
+                .blur(radius: 6)
+                .allowsHitTesting(false)
+                .overlay {
+                    Button { premium.showPaywall = true } label: {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .overlay(PremiumLockBadge())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("premiumLock")
+                    .accessibilityLabel("Premium feature. Tap to unlock.")
+                }
+        }
+    }
+}
+
+struct PremiumLockBadge: View {
+    var body: some View {
+        Image(systemName: "lock.fill")
+            .font(.system(size: 15, weight: .bold))
+            .foregroundColor(.white)
+            .padding(9)
+            .background(Circle().fill(Color(red: 0.52, green: 0.22, blue: 0.88)))
+            .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+    }
+}
+
+extension View {
+    // Marks a view as premium. No-op for entitled users.
+    func premiumLocked() -> some View { modifier(PremiumLock()) }
+}
+
 struct MainTabView: View {
 
+    @ObservedObject private var premium = PremiumManager.shared
     @AppStorage("colorSchemePreference") private var colorSchemePreference = "system"
 
     private var preferredScheme: ColorScheme? {
@@ -2549,6 +2666,11 @@ struct MainTabView: View {
         }
         .tint(Color(red: 0.52, green: 0.22, blue: 0.88))
         .preferredColorScheme(preferredScheme)
+        // Presented here, not in SettingsView: showPaywall is a flag on the shared
+        // PremiumManager, but a sheet only presents from the hierarchy it is attached
+        // to. While it lived in Settings, every gated feature in the other four tabs
+        // could set the flag and show nothing at all.
+        .sheet(isPresented: $premium.showPaywall) { PremiumPaywallView() }
     }
 }
 

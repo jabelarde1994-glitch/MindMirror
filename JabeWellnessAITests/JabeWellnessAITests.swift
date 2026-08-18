@@ -103,6 +103,51 @@ struct JabeWellnessAITests {
 
     // The trial anchor has to survive deleting the app, so it lives in the Keychain
     // rather than UserDefaults — a UserDefaults anchor granted a new trial per reinstall.
+    // MARK: - Feature gating
+    //
+    // Until 2026-08-18 nothing in the app consulted entitlement: isPremium and
+    // entitlementState were read in three cosmetic places and the $3.99 purchase
+    // unlocked nothing. These pin the predicate every gated feature now asks.
+
+    @Test func lockedUsersCannotReachPremiumFeatures() async throws {
+        #expect(PremiumManager.isFeatureUnlocked(.locked) == false)
+    }
+
+    @Test func trialUsersReachPremiumFeatures() async throws {
+        #expect(PremiumManager.isFeatureUnlocked(.trial(daysRemaining: 7)) == true)
+        #expect(PremiumManager.isFeatureUnlocked(.trial(daysRemaining: 1)) == true)
+    }
+
+    @Test func purchasersReachPremiumFeatures() async throws {
+        #expect(PremiumManager.isFeatureUnlocked(.purchased) == true)
+    }
+
+    // The gate must agree with the state machine feeding it, or a user can be
+    // entitled by one and refused by the other.
+    @Test func theGateAgreesWithEveryEntitlementState() async throws {
+        let purchased = PremiumManager.entitlementState(isPurchased: true,  isInTrial: false, trialDaysRemaining: 0)
+        let trialing  = PremiumManager.entitlementState(isPurchased: false, isInTrial: true,  trialDaysRemaining: 3)
+        let locked    = PremiumManager.entitlementState(isPurchased: false, isInTrial: false, trialDaysRemaining: 0)
+
+        #expect(PremiumManager.isFeatureUnlocked(purchased) == true)
+        #expect(PremiumManager.isFeatureUnlocked(trialing)  == true)
+        #expect(PremiumManager.isFeatureUnlocked(locked)    == false)
+    }
+
+    // An expired trial must close the gate. This is the case that would let a
+    // non-paying user keep premium forever if the gate read the wrong thing.
+    @Test func anExpiredTrialClosesTheGate() async throws {
+        let start = Date()
+        let elapsed = Calendar.current.date(byAdding: .day, value: 8, to: start) ?? start
+        let inTrial = PremiumManager.isInTrial(start: start, now: elapsed, trialDays: 7)
+        let state = PremiumManager.entitlementState(isPurchased: false,
+                                                    isInTrial: inTrial,
+                                                    trialDaysRemaining: 0)
+
+        #expect(inTrial == false)
+        #expect(PremiumManager.isFeatureUnlocked(state) == false)
+    }
+
     @Test func trialAnchorRoundTripsThroughTheKeychain() async throws {
         let anchor = date(daysAgo: 2)
         TrialAnchorStore.save(anchor)
