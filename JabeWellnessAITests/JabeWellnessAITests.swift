@@ -158,4 +158,109 @@ struct JabeWellnessAITests {
         #expect(abs(loaded.timeIntervalSince(anchor)) < 1.0)
     }
 
+
+    //*==================================================================*//
+    // MARK: - User-facing error copy
+    //*==================================================================*//
+
+    // Everything AIService returns on failure is rendered in the chat transcript as if Jabe
+    // said it. Version 1.0.1 shipped "Please check your Groq API key in the Secrets section"
+    // to end users, who have no Secrets section and no key. No failure message may name the
+    // provider, a credential, or a screen that only the developer can reach.
+    private static let forbiddenInUserCopy = [
+        "API key", "api key", "Groq", "groq", "Secrets", "secrets", "token", "SecretsStore"
+    ]
+
+    @Test func authFailuresDoNotTellUsersToCheckAnAPIKey() async throws {
+        for status in [401, 403] {
+            let message = AIService.userFacingError(for: status)
+            for term in Self.forbiddenInUserCopy {
+                #expect(
+                    !message.contains(term),
+                    "HTTP \(status) copy leaks \"\(term)\" to end users: \(message)"
+                )
+            }
+        }
+    }
+
+    @Test func noHTTPFailureMessageLeaksInternalDetails() async throws {
+        for status in [400, 401, 403, 404, 429, 500, 502, 503] {
+            let message = AIService.userFacingError(for: status)
+            for term in Self.forbiddenInUserCopy {
+                #expect(
+                    !message.contains(term),
+                    "HTTP \(status) copy leaks \"\(term)\": \(message)"
+                )
+            }
+        }
+    }
+
+    // A failure message that does not say what to do next is as useless as one that gives an
+    // impossible instruction. Every branch must be a non-empty sentence.
+    @Test func everyFailureMessageIsANonEmptySentence() async throws {
+        for status in [400, 401, 403, 404, 429, 500, 503] {
+            let message = AIService.userFacingError(for: status)
+            #expect(message.count > 20, "HTTP \(status) copy is too terse: \(message)")
+            // Sentence-ending punctuation, not a fragment. Not anchored to the final character:
+            // Jabe's voice ends some lines on an emoji, which is intentional.
+            #expect(message.contains("."), "HTTP \(status) copy is not a sentence: \(message)")
+        }
+    }
+
+    // Regression guard: the rate-limit wording was already correct and in Jabe's voice.
+    // Rewriting the auth copy must not flatten it.
+    @Test func rateLimitCopyKeepsItsFriendlyWording() async throws {
+        let message = AIService.userFacingError(for: 429)
+        #expect(message.contains("breathe"))
+        #expect(message.contains("minute"))
+    }
+
+    // The throw path was missed by the first pass at this fix. URLSession throws when offline or
+    // timed out, and JSONDecoder throws whenever Groq returns 200 with an unexpected body shape.
+    // Both land in JournalViewModel's catch and are rendered as Jabe speaking, so a raw Swift
+    // DecodingError string can reach a user in a chat bubble.
+    @Test func thrownErrorsDoNotLeakRawSystemDescriptions() async throws {
+        struct Broken: Decodable { let required: String }
+        var decodingError: Error?
+        do { _ = try JSONDecoder().decode(Broken.self, from: Data("{}".utf8)) }
+        catch { decodingError = error }
+        let thrown = try #require(decodingError)
+
+        let message = AIService.userFacingError(for: thrown)
+        for term in Self.forbiddenInUserCopy {
+            #expect(!message.contains(term), "thrown-error copy leaks \"\(term)\": \(message)")
+        }
+        // Compare against the system string itself rather than a hand-typed substring: Foundation
+        // renders a curly apostrophe (U+2019), so a literal "couldn't" silently never matches.
+        #expect(!message.contains(thrown.localizedDescription),
+                "raw system error text reaches the user: \(message)")
+        #expect(!message.contains("Decod"), "raw DecodingError type reaches the user: \(message)")
+    }
+
+    // Being offline IS actionable, unlike an auth failure — the copy should say so rather than
+    // collapsing into the generic service message.
+    @Test func offlineErrorsTellTheUserToCheckTheirConnection() async throws {
+        let offline = URLError(.notConnectedToInternet)
+        let message = AIService.userFacingError(for: offline)
+        #expect(message.lowercased().contains("connection") || message.lowercased().contains("offline"),
+                "offline copy should mention the connection: \(message)")
+    }
+
+    // Server-side outages are the transient case the calm retry copy exists for. They must not
+    // surface a raw HTTP status code in a wellness chat bubble.
+    @Test func serverErrorsDoNotSurfaceRawStatusCodes() async throws {
+        for status in [500, 502, 503, 504] {
+            let message = AIService.userFacingError(for: status)
+            #expect(!message.contains("HTTP"), "HTTP \(status) copy exposes a status code: \(message)")
+            #expect(!message.contains("\(status)"), "HTTP \(status) copy exposes the number: \(message)")
+        }
+    }
+
+    // 404 is what Groq returns for a decommissioned model id — exactly the 2026-08-16 failure.
+    // Telling the user to check Wi-Fi sends them chasing a fault only a new build can fix.
+    @Test func modelNotFoundDoesNotBlameTheUsersConnection() async throws {
+        let message = AIService.userFacingError(for: 404)
+        #expect(!message.lowercased().contains("internet connection"),
+                "404 copy misdirects the user to their network: \(message)")
+    }
 }

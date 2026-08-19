@@ -828,17 +828,64 @@ final class AIService {
     - Write in plain natural text — no bullet points, headers, or markdown
     """
 
+    // Failure copy. Every string below is appended to the chat transcript as if Jabe said it, so
+    // none of it may name an API key, a provider, or a screen the user has no access to. Held as
+    // constants and mapped by the pure functions underneath purely so it is testable — 1.0.1
+    // shipped "check your Groq API key in the Secrets section" to end users, and nothing could
+    // catch that while it sat inline in an async network call.
+    static let serviceUnavailableMessage =
+        "I can't reach the AI service right now. Let's try again in a moment. 🌿"
+
+    static let offlineMessage =
+        "It looks like you're offline. Please check your connection and we'll pick this up. 🌿"
+
+    /// Maps a thrown transport or decoding failure onto the sentence the user actually sees.
+    ///
+    /// `URLSession` throws when the device is offline or the request times out, and `JSONDecoder`
+    /// throws whenever the upstream returns 200 with a body shape that no longer matches. Both
+    /// land in `JournalViewModel`'s catch and are appended as Jabe speaking, so a raw
+    /// `DecodingError` or `URLError` description would otherwise reach a user in a chat bubble.
+    /// Only the offline case is actionable, so only that one gets its own advice.
+    static func userFacingError(for error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+                return offlineMessage
+            default:
+                return serviceUnavailableMessage
+            }
+        }
+        return serviceUnavailableMessage
+    }
+
+    /// Maps an HTTP failure onto the sentence the user actually sees.
+    ///
+    /// Rate limiting is the only status a user can act on, so it is the only one with bespoke
+    /// copy. Everything else — auth, a retired model id (Groq answers 404 for that, which is the
+    /// 2026-08-16 failure), and 5xx outages — is indistinguishable from the user's side and must
+    /// not surface a status code or send them chasing their own network. The status is still
+    /// printed in DEBUG above, so nothing is lost for support.
+    static func userFacingError(for statusCode: Int) -> String {
+        switch statusCode {
+        case 429: return "I need a moment to breathe. 🌿 You've sent a lot of messages quickly — please wait about a minute and try again."
+        default:  return serviceUnavailableMessage
+        }
+    }
+
     func send(
         history: [ChatMessage],
         mood: MoodType
     ) async throws -> String {
 
         guard apiKey.starts(with: "gsk_") else {
-            return "Please replace the placeholder in Secrets with your real Groq API key."
+            #if DEBUG
+            print("GROQ CONFIG: SecretsStore.groqAPIKey is unset or malformed — no request was sent.")
+            #endif
+            return Self.serviceUnavailableMessage
         }
 
         guard let url = URL(string: "https://api.groq.com/openai/v1/chat/completions") else {
-            return "Invalid Groq API URL."
+            return Self.serviceUnavailableMessage
         }
 
         var messages: [[String: Any]] = [
@@ -870,7 +917,7 @@ final class AIService {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let http = response as? HTTPURLResponse else { return "Invalid server response." }
+        guard let http = response as? HTTPURLResponse else { return Self.serviceUnavailableMessage }
 
         #if DEBUG
         print("GROQ STATUS:", http.statusCode)
@@ -878,12 +925,7 @@ final class AIService {
         #endif
 
         guard http.statusCode == 200 else {
-            switch http.statusCode {
-            case 429: return "I need a moment to breathe. 🌿 You've sent a lot of messages quickly — please wait about a minute and try again."
-            case 401, 403: return "There's an issue with the API key. Please check your Groq API key in the Secrets section."
-            case 404: return "The AI model couldn't be reached. Please check your internet connection and try again."
-            default:  return "Something went wrong on my end (HTTP \(http.statusCode)). Please try again in a moment."
-            }
+            return Self.userFacingError(for: http.statusCode)
         }
 
         let decoded = try JSONDecoder().decode(GroqResponse.self, from: data)
@@ -979,7 +1021,7 @@ final class JournalViewModel: ObservableObject {
             haptic(.success)
             StreakManager.shared.recordCheckIn()
         } catch {
-            append(ChatMessage(content: "Something went wrong: \(error.localizedDescription)", isUser: false, mood: nil, timestamp: Date()))
+            append(ChatMessage(content: AIService.userFacingError(for: error), isUser: false, mood: nil, timestamp: Date()))
             haptic(.error)
         }
     }
