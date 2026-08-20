@@ -11,6 +11,14 @@
 </p>
 
 <p align="center">
+  <a href="https://apps.apple.com/app/jabe-wellness/id6797912257">
+    <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="52" alt="Download Jabe Wellness AI on the App Store" />
+  </a>
+</p>
+
+<p align="center"><sub>Free to download · iPhone · iOS 17.6+</sub></p>
+
+<p align="center">
   <img src="screenshots/chat.png" width="200" alt="Chat" />
   <img src="screenshots/insights.png" width="200" alt="Insights" />
   <img src="screenshots/exercises.png" width="200" alt="Guided exercises" />
