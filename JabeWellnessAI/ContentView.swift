@@ -1046,6 +1046,16 @@ final class JournalViewModel: ObservableObject {
 }
 
 //*======================================================================*//
+// MARK: - Day Formatting
+//*======================================================================*//
+
+/// Renders a day count with the matching noun, so a value of 1 reads "1 day"
+/// rather than "1 days". Every user-facing day count goes through here.
+func dayCount(_ days: Int) -> String {
+    "\(days) day\(days == 1 ? "" : "s")"
+}
+
+//*======================================================================*//
 // MARK: - Rounded Corner Shape
 //*======================================================================*//
 
@@ -1872,7 +1882,7 @@ struct SettingsView: View {
                             HStack {
                                 Label("Free Trial Active", systemImage: "star.fill").foregroundColor(.orange)
                                 Spacer()
-                                Text("\(daysRemaining) days left")
+                                Text("\(dayCount(daysRemaining)) left")
                                     .font(.caption).foregroundColor(.orange)
                             }
                         }
@@ -2070,7 +2080,7 @@ struct StreakBannerView: View {
                 Text(isToday ? "You checked in today!" : "Chat today to keep your streak")
                     .font(.caption).foregroundColor(.secondary)
                 if longestStreak > 0 {
-                    Text("Best: \(longestStreak) days")
+                    Text("Best: \(dayCount(longestStreak))")
                         .font(.caption2).foregroundColor(.orange)
                 }
             }
@@ -2513,7 +2523,7 @@ struct PremiumPaywallView: View {
                         if premium.isInTrial {
                             HStack {
                                 Image(systemName: "clock.fill").foregroundColor(.orange)
-                                Text("\(premium.trialDaysRemaining) days left in your free trial")
+                                Text("\(dayCount(premium.trialDaysRemaining)) left in your free trial")
                                     .fontWeight(.medium)
                             }
                             .font(.subheadline)

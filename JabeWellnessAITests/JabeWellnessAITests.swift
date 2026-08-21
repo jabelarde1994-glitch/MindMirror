@@ -263,4 +263,26 @@ struct JabeWellnessAITests {
         #expect(!message.lowercased().contains("internet connection"),
                 "404 copy misdirects the user to their network: \(message)")
     }
+
+    // A count of exactly 1 read "1 days" everywhere a day count was shown — the streak
+    // card's "Best:" line, the Settings trial row, and the paywall header. It was visible
+    // in the launch ad's Insights panel before it was caught.
+    @Test func aSingleDayIsNotPluralized() async throws {
+        #expect(dayCount(1) == "1 day")
+    }
+
+    @Test func everyOtherDayCountKeepsThePlural() async throws {
+        #expect(dayCount(0) == "0 days")
+        #expect(dayCount(2) == "2 days")
+        #expect(dayCount(7) == "7 days")
+        #expect(dayCount(21) == "21 days")
+    }
+
+    // The three call sites embed the result in a sentence, so the helper must supply the
+    // number and noun and nothing else — no trailing "left", no leading "Best:".
+    @Test func dayCountSuppliesOnlyTheNumberAndNoun() async throws {
+        #expect(dayCount(3) == "3 days")
+        #expect(!dayCount(3).contains("left"))
+        #expect(!dayCount(3).hasSuffix(" "))
+    }
 }
