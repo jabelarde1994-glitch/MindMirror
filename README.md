@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="JabeWellnessAI/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="110" alt="Jabe Wellness AI app icon" />
+  <img src="JabeWellnessAI/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="110" alt="Jabe Wellness app icon" />
 </p>
 
-<h1 align="center">Jabe Wellness AI</h1>
+<h1 align="center">Jabe Wellness</h1>
 <p align="center"><em>Your Emotional Wellness Companion</em></p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://apps.apple.com/app/jabe-wellness/id6797912257">
-    <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="52" alt="Download Jabe Wellness AI on the App Store" />
+    <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="52" alt="Download Jabe Wellness on the App Store" />
   </a>
 </p>
 
