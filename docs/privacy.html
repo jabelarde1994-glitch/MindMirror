@@ -12,6 +12,7 @@
       color: #1a1a1a;
       padding: 40px 20px;
       line-height: 1.7;
+      overflow-wrap: break-word;
     }
     .container {
       max-width: 720px;
@@ -27,9 +28,11 @@
       gap: 12px;
       margin-bottom: 32px;
     }
+    .logo > div { min-width: 0; }
     .logo-icon {
       width: 48px;
       height: 48px;
+      flex-shrink: 0;
       background: linear-gradient(135deg, #7c3aed, #a855f7);
       border-radius: 12px;
       display: flex;
@@ -60,10 +63,14 @@
     p { margin-bottom: 14px; font-size: 15px; }
     ul { padding-left: 20px; margin-bottom: 14px; }
     ul li { margin-bottom: 6px; font-size: 15px; }
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 14px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 14px;
       font-size: 14px;
     }
     th {
@@ -77,6 +84,42 @@
     tr:last-child td { border-bottom: none; }
     a { color: #7c3aed; text-decoration: none; }
     a:hover { text-decoration: underline; }
+
+    /* Phones: the desktop card burns 120px of horizontal padding, which on a
+       320-390px screen leaves too little room for the content to lay out. */
+    @media (max-width: 600px) {
+      body { padding: 20px 12px; }
+      .container { padding: 28px 20px; border-radius: 14px; }
+      .logo { margin-bottom: 24px; gap: 10px; }
+      .logo-icon { width: 42px; height: 42px; font-size: 21px; border-radius: 10px; }
+      .logo-text { font-size: 18px; }
+      h1 { font-size: 24px; }
+      h2 { font-size: 17px; margin-top: 30px; }
+      .updated { margin-bottom: 28px; }
+      .footer { margin-top: 36px; }
+      .summary-box { padding: 14px 16px; margin-bottom: 28px; }
+      /* Three columns cannot fit a phone: the narrowest one alone needs more
+         width than an iPhone SE leaves. Stack each service into its own labelled
+         block instead of squeezing columns off-screen. */
+      .table-wrap { overflow-x: visible; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      .table-head { display: none; }
+      tr { padding: 14px 0; border-bottom: 1px solid #f0f0f0; }
+      tr:last-child { border-bottom: none; }
+      td { padding: 0; border-bottom: none; }
+      td + td { margin-top: 10px; }
+      td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #7c3aed;
+        margin-bottom: 1px;
+      }
+    }
+
     .footer {
       margin-top: 48px;
       padding-top: 24px;
@@ -159,28 +202,30 @@
     <p>If you enable daily reminders, Jabe schedules a local notification entirely on your device. No notification data is sent to any external server.</p>
 
     <h2>Third-Party Services</h2>
-    <table>
-      <tr>
-        <th>Service</th>
-        <th>Purpose</th>
-        <th>Privacy Policy</th>
-      </tr>
-      <tr>
-        <td>Groq API</td>
-        <td>AI chat responses</td>
-        <td><a href="https://groq.com/privacy" target="_blank">groq.com/privacy</a></td>
-      </tr>
-      <tr>
-        <td>Apple SFSpeechRecognizer</td>
-        <td>Voice-to-text transcription</td>
-        <td><a href="https://apple.com/privacy" target="_blank">apple.com/privacy</a></td>
-      </tr>
-      <tr>
-        <td>Apple StoreKit 2</td>
-        <td>In-app purchase processing</td>
-        <td><a href="https://apple.com/privacy" target="_blank">apple.com/privacy</a></td>
-      </tr>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <tr class="table-head">
+          <th>Service</th>
+          <th>Purpose</th>
+          <th>Privacy Policy</th>
+        </tr>
+        <tr>
+          <td data-label="Service">Groq API</td>
+          <td data-label="Purpose">AI chat responses</td>
+          <td data-label="Privacy Policy"><a href="https://groq.com/privacy" target="_blank">groq.com/privacy</a></td>
+        </tr>
+        <tr>
+          <td data-label="Service">Apple SFSpeechRecognizer</td>
+          <td data-label="Purpose">Voice-to-text transcription</td>
+          <td data-label="Privacy Policy"><a href="https://apple.com/privacy" target="_blank">apple.com/privacy</a></td>
+        </tr>
+        <tr>
+          <td data-label="Service">Apple StoreKit 2</td>
+          <td data-label="Purpose">In-app purchase processing</td>
+          <td data-label="Privacy Policy"><a href="https://apple.com/privacy" target="_blank">apple.com/privacy</a></td>
+        </tr>
+      </table>
+    </div>
     <p>Jabe does not use advertising networks, analytics SDKs, or any third-party tracking services.</p>
 
     <h2>Children's Privacy</h2>
